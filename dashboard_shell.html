@@ -804,6 +804,67 @@
   var saveTimer = null;
   var saveNote = "Saved on this device";
 
+  /* Cross-device sync via Supabase. Only status/notes go here — never the
+     scraped lead data itself. Safe to embed the anon key in public code:
+     Supabase's model is that access control lives in the database's row
+     policies (see supabase/schema.sql), not in hiding this key. Wherever
+     `fetch` to an external host is blocked — inside the Claude Artifact's
+     CSP — these calls just fail and the page falls back to localStorage
+     and/or the artifact-capability sync below, silently. */
+  var SUPABASE_URL = "https://ajevxwdgmpaakjkffvmf.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqZXZ4d2RnbXBhYWtqa2Zmdm1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwNjE5NzIsImV4cCI6MjEwMDYzNzk3Mn0.bB97bHOFgCeMUTYUraOArzvXAkFRHxiajrCg3gwCGrc";
+  var supabaseOk = null; // null = unknown yet, true/false once we've tried
+
+  function supabaseHeaders(extra) {
+    return Object.assign({
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    }, extra || {});
+  }
+
+  function loadFromSupabase() {
+    return fetch(SUPABASE_URL + "/rest/v1/lead_status?select=id,status,note,updated_at", {
+      headers: supabaseHeaders()
+    }).then(function (r) {
+      if (!r.ok) throw new Error("supabase read " + r.status);
+      return r.json();
+    }).then(function (rows) {
+      supabaseOk = true;
+      var changed = false;
+      rows.forEach(function (row) {
+        var remoteUpdatedAt = new Date(row.updated_at).getTime();
+        var mine = track[row.id];
+        if (!mine || remoteUpdatedAt > (mine.updatedAt || 0)) {
+          track[row.id] = { status: row.status, note: row.note || "", updatedAt: remoteUpdatedAt };
+          changed = true;
+        }
+      });
+      if (changed) { render(); if (selected) openDrawer(selected); }
+      return true;
+    }).catch(function () {
+      supabaseOk = false;
+      return false;
+    });
+  }
+
+  function pushToSupabase(id, e) {
+    return fetch(SUPABASE_URL + "/rest/v1/lead_status", {
+      method: "POST",
+      headers: supabaseHeaders({ "Prefer": "resolution=merge-duplicates,return=minimal" }),
+      body: JSON.stringify([{
+        id: id, status: e.status, note: e.note,
+        updated_at: new Date(e.updatedAt || Date.now()).toISOString()
+      }])
+    }).then(function (r) {
+      supabaseOk = r.ok;
+      return r.ok;
+    }).catch(function () {
+      supabaseOk = false;
+      return false;
+    });
+  }
+
   function entry(id) {
     if (!track[id]) track[id] = { status: "new", note: "", updatedAt: 0 };
     return track[id];
@@ -813,28 +874,34 @@
     return (track[id] && track[id].status) || "new";
   }
 
-  function persist() {
+  var pendingSaveId = null;
+
+  function persist(id) {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(track)); } catch (e) {}
     renderSaveState("Saving…");
+    if (id) pendingSaveId = id;
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(pushRemote, 2200);
   }
 
   function pushRemote() {
-    if (!artifactApi) { renderSaveState(saveNote); return; }
-    artifactApi.publish({ "data/track.json": JSON.stringify(track) }).then(function () {
-      saveNote = "Synced to this artifact";
-      renderSaveState(saveNote);
-    }).catch(function (err) {
-      var code = err && err.code;
-      if (code === "not_writer" || code === "not_granted" || code === "capability_disabled" || code === "not_declared") {
-        artifactApi = null;
-        saveNote = "Saved on this device";
-      } else if (code === "conflict") {
-        return; // the shell reloads every view to the winning version
-      } else {
-        saveNote = "Saved on this device · sync retry pending";
-      }
+    var id = pendingSaveId;
+    var supaPromise = id ? pushToSupabase(id, track[id]) : Promise.resolve(false);
+    var artifactPromise = artifactApi
+      ? artifactApi.publish({ "data/track.json": JSON.stringify(track) }).then(function () { return true; }).catch(function (err) {
+          var code = err && err.code;
+          if (code === "not_writer" || code === "not_granted" || code === "capability_disabled" || code === "not_declared") {
+            artifactApi = null;
+          }
+          return false; // 'conflict' also lands here — the shell already reloads the view
+        })
+      : Promise.resolve(false);
+
+    Promise.all([supaPromise, artifactPromise]).then(function (results) {
+      var supaWorked = results[0], artifactWorked = results[1];
+      if (supaWorked) saveNote = "Synced to Supabase";
+      else if (artifactWorked) saveNote = "Synced to this artifact";
+      else saveNote = "Saved on this device";
       renderSaveState(saveNote);
     });
   }
@@ -843,6 +910,9 @@
     var el = document.getElementById("saveState");
     if (el) el.textContent = text;
   }
+
+  /* Pull any status/notes saved from another browser or device. */
+  loadFromSupabase();
 
   /* Light up durable sync if the viewer grants it. */
   if (window.claude && typeof window.claude.use === "function") {
@@ -861,7 +931,7 @@
             changed = true;
           }
         });
-        saveNote = "Synced to this artifact";
+        if (supabaseOk !== true) saveNote = "Synced to this artifact";
         if (changed) { render(); if (selected) openDrawer(selected); }
         renderSaveState(saveNote);
       }).catch(function () {});
@@ -1288,7 +1358,7 @@
     var e = entry(selected.id);
     e.status = btn.dataset.status;
     e.updatedAt = Date.now();
-    persist();
+    persist(selected.id);
     openDrawer(selected);
   });
 
@@ -1298,8 +1368,9 @@
     var e = entry(selected.id);
     e.note = ev.target.value;
     e.updatedAt = Date.now();
+    var noteLeadId = selected.id; // capture now — `selected` may change before the timer fires
     if (noteTimer) clearTimeout(noteTimer);
-    noteTimer = setTimeout(persist, 400);
+    noteTimer = setTimeout(function () { persist(noteLeadId); }, 400);
   });
 
   document.getElementById("copyMsg").addEventListener("click", function () {

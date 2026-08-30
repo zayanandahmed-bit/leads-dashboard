@@ -120,7 +120,9 @@ def derive_city(address: str, country: dict) -> str:
         town = country["strip"].sub("", part).strip(" ,")
         # A real fallback town name is short; anything longer is an
         # unparsed address fragment, not a place name — don't show that.
-        if town and len(town) <= 24:
+        # A bare 2-letter code ("FL", "CA") is a US state abbreviation left
+        # over after stripping the ZIP from "City, FL 33101" — not a city.
+        if town and 2 < len(town) <= 24 and not re.fullmatch(r"[A-Z]{2}", town):
             return town
     return "Other"
 
