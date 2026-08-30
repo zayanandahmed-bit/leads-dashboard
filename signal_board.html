@@ -1090,19 +1090,28 @@
     }).length;
     var lateOpen = scope.filter(function (l) { return l.closes !== null && l.closes >= 19; }).length;
 
-    var reachable = scope.filter(isLive).length;
+    var reachable = scope.filter(isLive).length;              // verified OR unchecked-but-has-a-number
+    var verifiedCount = scope.filter(function (l) { return l.waSrc === "verified"; }).length;
+    var uncheckedLive = reachable - verifiedCount;
     var anyVerified = scope.some(function (l) {
       return l.waSrc === "verified" || l.waSrc === "not-registered";
     });
 
+    // The value must never claim more certainty than it has: once ANY lead
+    // in view has been through Evolution, show the VERIFIED count only —
+    // never blend in unchecked numbers under a "Verified" label — and say
+    // plainly how many more are still unchecked.
+    var waTile = anyVerified
+      ? { label: "Verified on WhatsApp", value: verifiedCount,
+          note: uncheckedLive ? uncheckedLive.toLocaleString() + " more unchecked" : "confirmed via Evolution API",
+          cls: "is-accent" }
+      : { label: "On WhatsApp", value: reachable,
+          note: reachable && total ? Math.round(reachable / total * 100) + "% — rest are landlines" : "none found yet",
+          cls: "is-accent" };
+
     var tiles = [
       { label: "Leads", value: total.toLocaleString(), note: "reachable businesses" },
-      { label: anyVerified ? "Verified on WhatsApp" : "On WhatsApp", value: reachable,
-        note: anyVerified
-          ? "confirmed via Evolution API"
-          : (reachable && total ? Math.round(reachable / total * 100) + "% — rest are landlines"
-                       : "none found yet"),
-        cls: "is-accent" },
+      waTile,
       { label: "Prime targets", value: prime, note: "score 75+", cls: "is-prime" },
       { label: "Open past 7PM", value: lateOpen, note: "after-hours enquiry load" },
       { label: "Contacted", value: touched, note: touched && total ? Math.round(touched / total * 100) + "% of list" : "none yet" },
