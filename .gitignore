@@ -2,4 +2,19 @@ __pycache__/
 *.pyc
 result.csv
 output.csv
-playwright/.cache/ 
+playwright/.cache/
+.env
+.DS_Store
+
+# Virtualenv
+venv/
+
+# Raw scraping/enrichment working data — regenerable from the scripts,
+# and no need to version thousands of rows of intermediate scrape output.
+# The finished dashboard (signal_board.html / docs/index.html) is what
+# actually gets published.
+*_leads_master.csv
+whatsapp*.json
+wa_verified.json
+test_london_dentists.csv
+

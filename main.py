@@ -126,16 +126,23 @@ def scrape_places(search_for: str, total: int) -> List[Place]:
             page.wait_for_selector('//a[contains(@href, "https://www.google.com/maps/place")]')
             page.hover('//a[contains(@href, "https://www.google.com/maps/place")]')
             previously_counted = 0
+            stagnant_rounds = 0
             while True:
                 page.mouse.wheel(0, 10000)
+                page.wait_for_timeout(2500)  # give Maps time to load the next batch
                 page.wait_for_selector('//a[contains(@href, "https://www.google.com/maps/place")]')
                 found = page.locator('//a[contains(@href, "https://www.google.com/maps/place")]').count()
                 logging.info(f"Currently Found: {found}")
                 if found >= total:
                     break
                 if found == previously_counted:
-                    logging.info("Arrived at all available")
-                    break
+                    # only give up after several consecutive rounds with no new results
+                    stagnant_rounds += 1
+                    if stagnant_rounds >= 4:
+                        logging.info("Arrived at all available")
+                        break
+                else:
+                    stagnant_rounds = 0
                 previously_counted = found
             listings = page.locator('//a[contains(@href, "https://www.google.com/maps/place")]').all()[:total]
             listings = [listing.locator("xpath=..") for listing in listings]
@@ -159,9 +166,6 @@ def scrape_places(search_for: str, total: int) -> List[Place]:
 def save_places_to_csv(places: List[Place], output_path: str = "result.csv", append: bool = False):
     df = pd.DataFrame([asdict(place) for place in places])
     if not df.empty:
-        for column in df.columns:
-            if df[column].nunique() == 1:
-                df.drop(column, axis=1, inplace=True)
         file_exists = os.path.isfile(output_path)
         mode = "a" if append else "w"
         header = not (append and file_exists)

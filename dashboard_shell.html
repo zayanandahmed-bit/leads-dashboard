@@ -1,0 +1,1376 @@
+<meta charset="utf-8">
+<title>Signal Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    /* Light palette. Neutrals carry a slight teal bias so they read as chosen. */
+    --ground:        #E9EEEE;
+    --surface:       #FFFFFF;
+    --surface-sunk:  #F3F6F6;
+    --line:          #D2DBDA;
+    --line-strong:   #B6C3C2;
+    --ink:           #0F1A1B;
+    --ink-soft:      #3D4E4E;
+    --ink-muted:     #677978;
+    --accent:        #0B6B58;
+    --accent-soft:   #DCEEE8;
+    --accent-ink:    #08503F;
+
+    /* Priority ramp — deliberately warm, so urgency never reads as accent. */
+    --prime:         #9E3D18;
+    --prime-soft:    #F7E3D9;
+    --strong:        #7D6413;
+    --strong-soft:   #F4EDD5;
+    --watch:         #627372;
+    --watch-soft:    #E6EBEB;
+
+    /* Pipeline states. */
+    --st-new:        #677978;
+    --st-contacted:  #2F5C86;
+    --st-replied:    #0B6B58;
+    --st-won:        #14603A;
+    --st-lost:       #8A3B36;
+
+    --radius:        3px;
+    --shadow:        0 1px 2px rgba(15, 26, 27, .06), 0 8px 24px rgba(15, 26, 27, .07);
+
+    --font-display:  "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
+    --font-body:     "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --font-mono:     "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:        #0C1213;
+      --surface:       #151E1E;
+      --surface-sunk:  #101818;
+      --line:          #263433;
+      --line-strong:   #384948;
+      --ink:           #E4ECEB;
+      --ink-soft:      #B3C3C1;
+      --ink-muted:     #819594;
+      --accent:        #3FC7A3;
+      --accent-soft:   #12332C;
+      --accent-ink:    #7EE0C4;
+
+      --prime:         #E68A5C;
+      --prime-soft:    #3A2116;
+      --strong:        #D8B950;
+      --strong-soft:   #322A11;
+      --watch:         #8DA09F;
+      --watch-soft:    #1D2827;
+
+      --st-new:        #8DA09F;
+      --st-contacted:  #7FB0DE;
+      --st-replied:    #3FC7A3;
+      --st-won:        #56C98A;
+      --st-lost:       #E08A84;
+
+      --shadow:        0 1px 2px rgba(0, 0, 0, .5), 0 10px 30px rgba(0, 0, 0, .45);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:        #0C1213;
+    --surface:       #151E1E;
+    --surface-sunk:  #101818;
+    --line:          #263433;
+    --line-strong:   #384948;
+    --ink:           #E4ECEB;
+    --ink-soft:      #B3C3C1;
+    --ink-muted:     #819594;
+    --accent:        #3FC7A3;
+    --accent-soft:   #12332C;
+    --accent-ink:    #7EE0C4;
+
+    --prime:         #E68A5C;
+    --prime-soft:    #3A2116;
+    --strong:        #D8B950;
+    --strong-soft:   #322A11;
+    --watch:         #8DA09F;
+    --watch-soft:    #1D2827;
+
+    --st-new:        #8DA09F;
+    --st-contacted:  #7FB0DE;
+    --st-replied:    #3FC7A3;
+    --st-won:        #56C98A;
+    --st-lost:       #E08A84;
+
+    --shadow:        0 1px 2px rgba(0, 0, 0, .5), 0 10px 30px rgba(0, 0, 0, .45);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 28px 24px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 18px;
+    border-bottom: 2px solid var(--line-strong);
+  }
+
+  .masthead h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(28px, 4vw, 40px);
+    letter-spacing: -.015em;
+    line-height: 1;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0;
+    font-size: 14.5px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 10px;
+  }
+
+  .mast-actions { display: flex; gap: 8px; align-items: center; }
+
+  .region-picker {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding-right: 6px;
+    margin-right: 2px;
+    border-right: 1px solid var(--line-strong);
+  }
+
+  .region-label {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  #fCountry {
+    font-weight: 600;
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  /* ---------- buttons ---------- */
+
+  button {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
+  }
+
+  button:hover { background: var(--surface-sunk); border-color: var(--ink-muted); }
+
+  button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #FFFFFF;
+    font-weight: 500;
+  }
+
+  :root[data-theme="dark"] .btn-primary,
+  .btn-primary { color: var(--btn-primary-ink, #FFFFFF); }
+
+  .btn-primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
+
+  /* ---------- KPI strip ---------- */
+
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .kpi {
+    background: var(--surface);
+    padding: 14px 16px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .kpi-label {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .kpi-value {
+    font-family: var(--font-mono);
+    font-size: 26px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+    color: var(--ink);
+  }
+
+  .kpi-note { font-size: 12px; color: var(--ink-muted); }
+  .kpi-value.is-prime { color: var(--prime); }
+  .kpi-value.is-accent { color: var(--accent); }
+
+  /* ---------- controls ---------- */
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+  }
+
+  .search {
+    flex: 1 1 260px;
+    min-width: 200px;
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  input[type="search"], select, textarea {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--surface-sunk);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    padding: 7px 10px;
+    width: 100%;
+  }
+
+  input[type="search"]:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+  }
+
+  select { width: auto; cursor: pointer; }
+
+  .filter-count {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .filter-count.is-filtered { color: var(--prime); font-weight: 500; }
+
+  .wa-warn {
+    margin: 8px 0 0;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--prime);
+    background: var(--prime-soft);
+    border-left: 3px solid var(--prime);
+    padding: 8px 10px;
+  }
+
+  .wa-yes   { color: var(--accent); font-weight: 600; }
+  .wa-maybe { color: var(--ink-soft); }
+  .wa-no    { color: var(--ink-muted); }
+
+  #clearBtn { font-size: 12px; padding: 6px 10px; }
+
+  /* ---------- table ---------- */
+
+  .table-shell {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .table-scroll { overflow-x: auto; }
+
+  table { border-collapse: collapse; width: 100%; min-width: 860px; }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--surface-sunk);
+    border-bottom: 1px solid var(--line-strong);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    text-align: left;
+    padding: 9px 12px;
+    white-space: nowrap;
+  }
+
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--ink); }
+  th.sortable:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  th .arrow { opacity: .35; margin-left: 3px; }
+  th.sorted .arrow { opacity: 1; color: var(--accent); }
+
+  tbody tr {
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    transition: background .1s ease;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-sunk); }
+  tbody tr[aria-selected="true"] { background: var(--accent-soft); }
+
+  td { padding: 10px 12px; vertical-align: middle; }
+
+  .cell-name { font-weight: 500; color: var(--ink); }
+  .cell-sub { font-size: 12px; color: var(--ink-muted); margin-top: 1px; }
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  /* Priority stripe — encodes band, the one piece of state worth seeing
+     without reading a word. */
+  .stripe-cell { width: 4px; padding: 0; }
+  .stripe { display: block; width: 4px; height: 46px; background: var(--watch); }
+  .stripe.prime  { background: var(--prime); }
+  .stripe.strong { background: var(--strong); }
+
+  .score-wrap { display: flex; align-items: center; gap: 8px; }
+
+  .score-num {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 24px;
+  }
+
+  .score-num.prime  { color: var(--prime); }
+  .score-num.strong { color: var(--strong); }
+  .score-num.watch  { color: var(--watch); }
+
+  .meter { width: 52px; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .meter span { display: block; height: 100%; background: var(--watch); }
+  .meter span.prime  { background: var(--prime); }
+  .meter span.strong { background: var(--strong); }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 2px;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+
+  .pill-prime  { background: var(--prime-soft);  color: var(--prime); }
+  .pill-strong { background: var(--strong-soft); color: var(--strong); }
+  .pill-watch  { background: var(--watch-soft);  color: var(--watch); }
+  /* Sector is a category, not a priority — keep it out of the urgency ramp. */
+  .pill-sector { background: var(--surface-sunk); color: var(--ink-soft); border-color: var(--line-strong); }
+
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+
+  .status-new       { color: var(--st-new); }
+  .status-contacted { color: var(--st-contacted); }
+  .status-replied   { color: var(--st-replied); }
+  .status-won       { color: var(--st-won); }
+  .status-lost      { color: var(--st-lost); }
+
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .empty {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--ink-muted);
+  }
+
+  /* ---------- drawer ---------- */
+
+  .scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 16, 16, .42);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease;
+    z-index: 40;
+  }
+
+  .scrim.open { opacity: 1; pointer-events: auto; }
+
+  .drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: min(440px, 100%);
+    background: var(--surface);
+    border-left: 1px solid var(--line-strong);
+    box-shadow: var(--shadow);
+    transform: translateX(100%);
+    transition: transform .22s cubic-bezier(.4, 0, .2, 1);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .drawer.open { transform: translateX(0); }
+
+  .drawer-head {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .drawer-head h2 {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  .drawer-body {
+    padding: 18px 20px 28px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .close-x {
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    line-height: 1;
+    padding: 2px 6px;
+    color: var(--ink-muted);
+    flex: none;
+  }
+
+  .close-x:hover { background: var(--surface-sunk); color: var(--ink); }
+
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin: 0 0 8px;
+  }
+
+  .why { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; }
+
+  .why li {
+    display: flex;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+  }
+
+  .why li::before {
+    content: "";
+    width: 3px;
+    flex: none;
+    background: var(--accent);
+    border-radius: 2px;
+    margin: 4px 0;
+  }
+
+  .facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .fact { background: var(--surface); padding: 9px 11px; }
+  .fact dt { font-family: var(--font-mono); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 2px; }
+  .fact dd { margin: 0; font-size: 13px; }
+  .fact dd a { color: var(--accent); text-decoration: none; overflow-wrap: anywhere; }
+  .fact dd a:hover { text-decoration: underline; }
+
+  .pipeline { display: flex; flex-wrap: wrap; gap: 5px; }
+
+  .pipeline button {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    padding: 6px 9px;
+  }
+
+  .pipeline button[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #FFFFFF;
+    font-weight: 500;
+  }
+
+  .msg-preview {
+    background: var(--surface-sunk);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 11px 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    white-space: pre-wrap;
+  }
+
+  .actions-row { display: flex; flex-wrap: wrap; gap: 7px; }
+
+  textarea { min-height: 84px; resize: vertical; font-size: 13px; line-height: 1.5; }
+
+  .save-state {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--ink);
+    color: var(--ground);
+    font-size: 13px;
+    padding: 9px 16px;
+    border-radius: var(--radius);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .16s ease, transform .16s ease;
+    z-index: 60;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .footnote {
+    font-size: 12px;
+    color: var(--ink-muted);
+    line-height: 1.6;
+    max-width: 78ch;
+  }
+
+  .footnote code {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    background: var(--surface-sunk);
+    border: 1px solid var(--line);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 20px 14px 60px; }
+    .facts { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <div>
+      <p class="eyebrow" id="eyebrow">UK outreach pipeline</p>
+      <h1>Signal Board</h1>
+      <p class="standfirst">
+        Businesses ranked by how much repetitive WhatsApp traffic they are likely
+        carrying &mdash; review volume as a proxy for enquiry load, weighted by
+        how late they stay open.
+      </p>
+    </div>
+    <div class="mast-actions">
+      <label class="region-picker">
+        <span class="region-label">Region</span>
+        <select id="fCountry" autocomplete="off" aria-label="Filter by country">
+          <option value="">All regions</option>
+        </select>
+      </label>
+      <button id="themeBtn" type="button" title="Switch theme">Theme</button>
+      <button id="exportBtn" class="btn-primary" type="button">Export CSV</button>
+    </div>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="Pipeline summary"></section>
+
+  <section class="controls">
+    <div class="search">
+      <input type="search" id="q" autocomplete="off" placeholder="Search name, area or postcode&hellip;" aria-label="Search leads">
+    </div>
+    <select id="fBand" autocomplete="off" aria-label="Filter by priority">
+      <option value="">All priorities</option>
+      <option value="prime">Prime only</option>
+      <option value="strong">Strong only</option>
+      <option value="watch">Watch only</option>
+    </select>
+    <select id="fVertical" autocomplete="off" aria-label="Filter by sector"></select>
+    <select id="fCity" autocomplete="off" aria-label="Filter by city"></select>
+    <select id="fStatus" autocomplete="off" aria-label="Filter by pipeline status">
+      <option value="">Any status</option>
+      <option value="new">Not contacted</option>
+      <option value="contacted">Contacted</option>
+      <option value="replied">Replied</option>
+      <option value="won">Won</option>
+      <option value="lost">Lost</option>
+    </select>
+    <select id="fWa" autocomplete="off" aria-label="Filter by WhatsApp reachability">
+      <option value="">Any number</option>
+      <option value="yes">WhatsApp reachable</option>
+      <option value="no">No WhatsApp</option>
+    </select>
+    <select id="fEmail" autocomplete="off" aria-label="Filter by email availability">
+      <option value="">Any email</option>
+      <option value="yes">Has email</option>
+      <option value="no">No email</option>
+    </select>
+    <button type="button" id="clearBtn" hidden>Clear filters</button>
+    <span class="filter-count" id="count"></span>
+  </section>
+
+  <div class="table-shell">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="stripe-cell" aria-label="Priority"></th>
+            <th class="sortable" data-sort="name" tabindex="0" role="button">Business <span class="arrow">&#9660;</span></th>
+            <th class="sortable" data-sort="score" tabindex="0" role="button">Signal <span class="arrow">&#9660;</span></th>
+            <th class="sortable" data-sort="reviews" tabindex="0" role="button">Reviews <span class="arrow">&#9660;</span></th>
+            <th class="sortable" data-sort="rating" tabindex="0" role="button">Rating <span class="arrow">&#9660;</span></th>
+            <th class="sortable" data-sort="closes" tabindex="0" role="button">Closes <span class="arrow">&#9660;</span></th>
+            <th>Sector</th>
+            <th class="sortable" data-sort="wa" tabindex="0" role="button" title="Has a WhatsApp-capable mobile">WhatsApp <span class="arrow">&#9660;</span></th>
+            <th class="sortable" data-sort="status" tabindex="0" role="button">Status <span class="arrow">&#9660;</span></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty" hidden>No leads match these filters.</div>
+  </div>
+
+  <p class="footnote" id="footnote"></p>
+</div>
+
+<div class="scrim" id="scrim"></div>
+
+<aside class="drawer" id="drawer" aria-hidden="true" aria-label="Lead detail">
+  <div class="drawer-head">
+    <div>
+      <h2 id="dName"></h2>
+      <div id="dMeta" class="cell-sub"></div>
+    </div>
+    <button class="close-x" id="closeBtn" type="button" aria-label="Close">&times;</button>
+  </div>
+  <div class="drawer-body">
+    <div>
+      <p class="section-label">Why this lead</p>
+      <ul class="why" id="dWhy"></ul>
+    </div>
+
+    <div>
+      <p class="section-label">Details</p>
+      <dl class="facts" id="dFacts"></dl>
+    </div>
+
+    <div>
+      <p class="section-label">Pipeline</p>
+      <div class="pipeline" id="dPipeline"></div>
+    </div>
+
+    <div>
+      <p class="section-label">Opening message</p>
+      <div class="msg-preview" id="dMsg"></div>
+      <div class="actions-row" style="margin-top:8px">
+        <button type="button" id="copyMsg">Copy message</button>
+        <button type="button" id="copyNum">Copy number</button>
+        <button type="button" id="copyEmail" hidden>Copy email</button>
+        <span id="waWrap" hidden><a id="waLink" href="#" target="_blank" rel="noopener noreferrer"><button type="button" class="btn-primary">Open in WhatsApp</button></a></span>
+      </div>
+      <p class="wa-warn" id="waWarn" hidden></p>
+    </div>
+
+    <div>
+      <p class="section-label">Notes</p>
+      <textarea id="dNote" placeholder="Who you spoke to, what they said, when to follow up&hellip;"></textarea>
+      <div class="save-state" id="saveState" style="margin-top:6px"></div>
+    </div>
+  </div>
+</aside>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script id="leadData" type="application/json">__LEADS__</script>
+
+<script>
+(function () {
+  "use strict";
+
+  var LEADS = JSON.parse(document.getElementById("leadData").textContent);
+  var STORE_KEY = "signalboard.track.v1";
+
+  var STATUSES = [
+    { id: "new",       label: "Not contacted" },
+    { id: "contacted", label: "Contacted" },
+    { id: "replied",   label: "Replied" },
+    { id: "won",       label: "Won" },
+    { id: "lost",      label: "Lost" }
+  ];
+
+  /* ---------- tracking state (per-lead status + notes) ---------- */
+
+  var track = {};
+  try {
+    var stored = localStorage.getItem(STORE_KEY);
+    if (stored) track = JSON.parse(stored) || {};
+  } catch (e) { track = {}; }
+
+  var artifactApi = null;
+  var saveTimer = null;
+  var saveNote = "Saved on this device";
+
+  function entry(id) {
+    if (!track[id]) track[id] = { status: "new", note: "", updatedAt: 0 };
+    return track[id];
+  }
+
+  function statusOf(id) {
+    return (track[id] && track[id].status) || "new";
+  }
+
+  function persist() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(track)); } catch (e) {}
+    renderSaveState("Saving…");
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(pushRemote, 2200);
+  }
+
+  function pushRemote() {
+    if (!artifactApi) { renderSaveState(saveNote); return; }
+    artifactApi.publish({ "data/track.json": JSON.stringify(track) }).then(function () {
+      saveNote = "Synced to this artifact";
+      renderSaveState(saveNote);
+    }).catch(function (err) {
+      var code = err && err.code;
+      if (code === "not_writer" || code === "not_granted" || code === "capability_disabled" || code === "not_declared") {
+        artifactApi = null;
+        saveNote = "Saved on this device";
+      } else if (code === "conflict") {
+        return; // the shell reloads every view to the winning version
+      } else {
+        saveNote = "Saved on this device · sync retry pending";
+      }
+      renderSaveState(saveNote);
+    });
+  }
+
+  function renderSaveState(text) {
+    var el = document.getElementById("saveState");
+    if (el) el.textContent = text;
+  }
+
+  /* Light up durable sync if the viewer grants it. */
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("artifact").then(function (api) {
+      if (!api) return;
+      artifactApi = api;
+      return fetch("data/track.json").then(function (r) {
+        return r.ok ? r.json() : null;
+      }).then(function (remote) {
+        if (!remote) return;
+        var changed = false;
+        Object.keys(remote).forEach(function (id) {
+          var mine = track[id];
+          if (!mine || (remote[id].updatedAt || 0) > (mine.updatedAt || 0)) {
+            track[id] = remote[id];
+            changed = true;
+          }
+        });
+        saveNote = "Synced to this artifact";
+        if (changed) { render(); if (selected) openDrawer(selected); }
+        renderSaveState(saveNote);
+      }).catch(function () {});
+    }).catch(function () {});
+  }
+
+  /* ---------- helpers ---------- */
+
+  function fmtClose(h) {
+    if (h === null || h === undefined) return "—";
+    if (h === 12) return "12PM";
+    if (h === 0) return "12AM";
+    return h > 12 ? (h - 12) + "PM" : h + "AM";
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  /* How the number was found, which is the only honest proxy we have for
+     whether it's really on WhatsApp. */
+  function isLive(l) {
+    // Evolution said no — that's final, whatever the website implied.
+    return !!l.wa && l.waSrc !== "not-registered";
+  }
+
+  /* Four states, no guess-tiers: either it's checked, or it isn't.
+     How the number was found stays in the drawer for anyone who wants it. */
+  function waClass(l) {
+    if (l.waSrc === "verified") return "wa-yes";
+    if (!isLive(l)) return "wa-no";
+    return "wa-maybe";
+  }
+
+  function waLabel(l) {
+    if (l.waSrc === "verified") return "Verified";
+    // A landline and a confirmed-dead mobile are the same outcome: you can't
+    // reach them on WhatsApp. The reason lives in the drawer.
+    if (!isLive(l)) return "No WhatsApp";
+    return "Unchecked";
+  }
+
+  function waDetail(l) {
+    if (!l.wa) return "No WhatsApp number found";
+    if (l.waSrc === "verified") return "Confirmed on WhatsApp by Evolution API";
+    if (l.waSrc === "not-registered") return "Evolution API checked this number — it is not on WhatsApp";
+    if (l.waSrc === "wa.me") return "Has a WhatsApp click-to-chat link on their site";
+    if (l.waSrc === "wa-context") return "Published beside the word “WhatsApp” on their site";
+    if (l.waSrc === "listed") return "Mobile listed on Google Maps";
+    return "Mobile found on their site, no WhatsApp wording nearby";
+  }
+
+  function statusLabel(id) {
+    for (var i = 0; i < STATUSES.length; i++) if (STATUSES[i].id === id) return STATUSES[i].label;
+    return "Not contacted";
+  }
+
+  function pitchFor(lead) {
+    var hook;
+    if (lead.closes !== null && lead.closes >= 19) {
+      hook = "you're open until " + fmtClose(lead.closes) + ", so a lot of enquiries must land after your front desk has gone home";
+    } else if (lead.reviews >= 500) {
+      hook = "with " + lead.reviews.toLocaleString() + " reviews you're clearly fielding a serious volume of enquiries";
+    } else {
+      hook = "you're likely fielding the same handful of questions over and over";
+    }
+    return "Hi " + lead.name + " — I noticed " + hook + ".\n\n" +
+      "I set up AI assistants on WhatsApp that answer the repetitive ones automatically " +
+      "(booking, availability, pricing, opening hours) and hand anything unusual straight to your team.\n\n" +
+      "Worth a quick look at what it'd catch for you?";
+  }
+
+  /* ---------- state ---------- */
+
+  var sortKey = "score";
+  var sortDir = -1;
+  var selected = null;
+
+  var FILTER_IDS = ["q", "fCountry", "fBand", "fVertical", "fCity", "fStatus", "fWa", "fEmail"];
+
+  function anyFilterSet() {
+    return FILTER_IDS.some(function (id) {
+      var el = document.getElementById(id);
+      return el && el.value !== "";
+    });
+  }
+
+  function resetFilterValues() {
+    FILTER_IDS.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+  }
+
+  function clearFilters() {
+    resetFilterValues();
+    refreshCityOptions();  // country reset to "All regions" — city list follows
+    updateEyebrow();
+    render();
+  }
+
+  /* Browsers restore <select> values across reloads, and the artifact frame
+     reloads on every republish — so a filter set minutes ago can silently
+     come back and look like missing leads. Start from a clean slate. */
+  resetFilterValues();
+
+  function filtered() {
+    var q = document.getElementById("q").value.trim().toLowerCase();
+    var country = document.getElementById("fCountry").value;
+    var band = document.getElementById("fBand").value;
+    var vert = document.getElementById("fVertical").value;
+    var city = document.getElementById("fCity").value;
+    var stat = document.getElementById("fStatus").value;
+    var wa = document.getElementById("fWa").value;
+    var email = document.getElementById("fEmail").value;
+
+    return LEADS.filter(function (l) {
+      if (country && l.country !== country) return false;
+      if (wa === "yes" && !isLive(l)) return false;
+      if (wa === "no" && isLive(l)) return false;
+      if (email === "yes" && !l.email) return false;
+      if (email === "no" && l.email) return false;
+      if (band && l.band !== band) return false;
+      if (vert && l.vertical !== vert) return false;
+      if (city && l.city !== city) return false;
+      if (stat && statusOf(l.id) !== stat) return false;
+      if (q) {
+        var hay = (l.name + " " + l.address + " " + l.type + " " + (l.email || "")).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    }).sort(function (a, b) {
+      var av, bv;
+      if (sortKey === "status") { av = statusOf(a.id); bv = statusOf(b.id); }
+      else if (sortKey === "wa") { av = a.wa ? 1 : 0; bv = b.wa ? 1 : 0; }
+      else { av = a[sortKey]; bv = b[sortKey]; }
+      if (av === null || av === undefined) av = -1;
+      if (bv === null || bv === undefined) bv = -1;
+      if (typeof av === "string") return av.localeCompare(bv) * sortDir;
+      return (av - bv) * sortDir;
+    });
+  }
+
+  /* ---------- render ---------- */
+
+  function renderKpis(scope) {
+    // Scoped to whatever's currently filtered (region included) — otherwise
+    // switching to UAE would still show the UK+UAE combined totals up top.
+    var total = scope.length;
+    var prime = scope.filter(function (l) { return l.band === "prime"; }).length;
+    var touched = scope.filter(function (l) { return statusOf(l.id) !== "new"; }).length;
+    var replied = scope.filter(function (l) {
+      var s = statusOf(l.id); return s === "replied" || s === "won";
+    }).length;
+    var lateOpen = scope.filter(function (l) { return l.closes !== null && l.closes >= 19; }).length;
+
+    var reachable = scope.filter(isLive).length;
+    var anyVerified = scope.some(function (l) {
+      return l.waSrc === "verified" || l.waSrc === "not-registered";
+    });
+
+    var tiles = [
+      { label: "Leads", value: total.toLocaleString(), note: "reachable businesses" },
+      { label: anyVerified ? "Verified on WhatsApp" : "On WhatsApp", value: reachable,
+        note: anyVerified
+          ? "confirmed via Evolution API"
+          : (reachable && total ? Math.round(reachable / total * 100) + "% — rest are landlines"
+                       : "none found yet"),
+        cls: "is-accent" },
+      { label: "Prime targets", value: prime, note: "score 75+", cls: "is-prime" },
+      { label: "Open past 7PM", value: lateOpen, note: "after-hours enquiry load" },
+      { label: "Contacted", value: touched, note: touched && total ? Math.round(touched / total * 100) + "% of list" : "none yet" },
+      { label: "Replied or won", value: replied, note: replied ? "keep these warm" : "no replies logged" }
+    ];
+
+    document.getElementById("kpis").innerHTML = tiles.map(function (t) {
+      return '<div class="kpi">' +
+        '<span class="kpi-label">' + esc(t.label) + "</span>" +
+        '<span class="kpi-value ' + (t.cls || "") + '">' + esc(t.value) + "</span>" +
+        '<span class="kpi-note">' + esc(t.note) + "</span>" +
+        "</div>";
+    }).join("");
+  }
+
+  function render() {
+    var list = filtered();
+    var tbody = document.getElementById("rows");
+
+    tbody.innerHTML = list.map(function (l) {
+      var st = statusOf(l.id);
+      return '<tr data-id="' + esc(l.id) + '" aria-selected="' + (selected && selected.id === l.id) + '">' +
+        '<td class="stripe-cell"><span class="stripe ' + l.band + '"></span></td>' +
+        "<td><div class='cell-name'>" + esc(l.name) + "</div>" +
+          "<div class='cell-sub'>" + esc(l.city) + " · " + esc(l.type || "—") + "</div></td>" +
+        '<td><div class="score-wrap">' +
+          '<span class="score-num ' + l.band + '">' + l.score + "</span>" +
+          '<span class="meter"><span class="' + l.band + '" style="width:' + l.score + '%"></span></span>' +
+          "</div></td>" +
+        '<td class="num">' + l.reviews.toLocaleString() + "</td>" +
+        '<td class="num">' + (l.rating ? l.rating.toFixed(1) : "—") + "</td>" +
+        '<td class="num">' + fmtClose(l.closes) + "</td>" +
+        "<td>" + '<span class="pill pill-sector">' + esc(l.vertical) + "</span></td>" +
+        '<td class="' + waClass(l) + '">' +
+          esc(waLabel(l)) + "</td>" +
+        '<td><span class="status-chip status-' + st + '"><span class="dot"></span>' + esc(statusLabel(st)) + "</span></td>" +
+        "</tr>";
+    }).join("");
+
+    document.getElementById("empty").hidden = list.length > 0;
+
+    // Make a filtered view unmistakable — otherwise a stale filter reads as
+    // missing data.
+    var filtersOn = list.length !== LEADS.length || anyFilterSet();
+    document.getElementById("clearBtn").hidden = !filtersOn;
+    var countEl = document.getElementById("count");
+    countEl.textContent = filtersOn
+      ? "Filtered — " + list.length + " of " + LEADS.length + " leads"
+      : list.length + " leads";
+    countEl.classList.toggle("is-filtered", filtersOn);
+
+    renderKpis(list);
+
+    document.querySelectorAll("th.sortable").forEach(function (th) {
+      var on = th.dataset.sort === sortKey;
+      th.classList.toggle("sorted", on);
+      var arrow = th.querySelector(".arrow");
+      if (arrow) arrow.textContent = on ? (sortDir === -1 ? "▼" : "▲") : "▼";
+    });
+  }
+
+  /* ---------- drawer ---------- */
+
+  function openDrawer(lead) {
+    selected = lead;
+    var e = entry(lead.id);
+
+    document.getElementById("dName").textContent = lead.name;
+    document.getElementById("dMeta").textContent =
+      lead.type + " · " + lead.city + " · signal " + lead.score + "/100";
+
+    document.getElementById("dWhy").innerHTML = (lead.reasons.length
+      ? lead.reasons
+      : ["Limited public signal — verify before spending time on this one."]
+    ).map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("");
+
+    var site = lead.website
+      ? '<a href="' + esc(/^https?:/.test(lead.website) ? lead.website : "https://" + lead.website) +
+        '" target="_blank" rel="noopener noreferrer">' + esc(lead.website) + "</a>"
+      : "—";
+
+    var emailHtml = lead.email
+      ? '<a href="mailto:' + esc(lead.email) + '">' + esc(lead.email) + "</a>"
+      : "—";
+
+    document.getElementById("dFacts").innerHTML =
+      '<div class="fact"><dt>Phone</dt><dd class="num">' + esc(lead.phone || "—") + "</dd></div>" +
+      '<div class="fact"><dt>WhatsApp</dt><dd class="num ' + (lead.wa ? "wa-yes" : "wa-no") + '">' +
+        (lead.wa ? "+" + esc(lead.wa) : "none") + "</dd></div>" +
+      '<div class="fact" style="grid-column:1/-1"><dt>Email</dt><dd>' + emailHtml + "</dd></div>" +
+      '<div class="fact" style="grid-column:1/-1"><dt>How we found it</dt><dd>' +
+        esc(waDetail(lead)) + "</dd></div>" +
+      '<div class="fact" style="grid-column:1/-1"><dt>Website</dt><dd>' + site + "</dd></div>" +
+      '<div class="fact"><dt>Reviews</dt><dd class="num">' + lead.reviews.toLocaleString() + "</dd></div>" +
+      '<div class="fact"><dt>Rating</dt><dd class="num">' + (lead.rating ? lead.rating.toFixed(1) : "—") + "</dd></div>" +
+      '<div class="fact" style="grid-column:1/-1"><dt>Address</dt><dd>' + esc(lead.address) + "</dd></div>";
+
+    document.getElementById("dPipeline").innerHTML = STATUSES.map(function (s) {
+      return '<button type="button" data-status="' + s.id + '" aria-pressed="' +
+        (e.status === s.id) + '">' + esc(s.label) + "</button>";
+    }).join("");
+
+    var pitch = pitchFor(lead);
+    document.getElementById("dMsg").textContent = pitch;
+
+    /* Only offer WhatsApp when there is a mobile behind it — a landline link
+       just dead-ends on "this number isn't on WhatsApp". */
+    var waWrap = document.getElementById("waWrap");
+    var waWarn = document.getElementById("waWarn");
+    if (isLive(lead)) {
+      document.getElementById("waLink").href =
+        "https://wa.me/" + lead.wa + "?text=" + encodeURIComponent(pitch);
+      waWrap.hidden = false;
+      waWarn.hidden = lead.waSrc !== "mobile";
+      if (lead.waSrc === "verified") waWarn.hidden = true;
+      waWarn.textContent = "This is a mobile from their website with no WhatsApp " +
+        "wording near it — it may not be registered. If the send fails, that's why.";
+    } else {
+      waWrap.hidden = true;
+      waWarn.hidden = false;
+      waWarn.textContent = lead.waSrc === "not-registered"
+        ? "Evolution API checked " + lead.wa + " — it is not registered on WhatsApp. Call or email instead."
+        : (lead.website
+          ? "No WhatsApp number found — the listed number is a landline. Try the contact form or call first."
+          : "No WhatsApp number found — the listed number is a landline. Call reception and ask for their mobile.");
+    }
+
+    document.getElementById("copyEmail").hidden = !lead.email;
+
+    document.getElementById("dNote").value = e.note || "";
+    renderSaveState(saveNote);
+
+    document.getElementById("drawer").classList.add("open");
+    document.getElementById("drawer").setAttribute("aria-hidden", "false");
+    document.getElementById("scrim").classList.add("open");
+    render();
+  }
+
+  function closeDrawer() {
+    selected = null;
+    document.getElementById("drawer").classList.remove("open");
+    document.getElementById("drawer").setAttribute("aria-hidden", "true");
+    document.getElementById("scrim").classList.remove("open");
+    render();
+  }
+
+  function toast(msg) {
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(function () { t.classList.remove("show"); }, 1800);
+  }
+
+  function copy(text, label) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { toast(label + " copied"); })
+        .catch(function () { toast("Copy blocked — select the text manually"); });
+    } else {
+      toast("Copy blocked — select the text manually");
+    }
+  }
+
+  /* ---------- filters ---------- */
+
+  function fillSelect(id, values, allLabel) {
+    var sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">' + allLabel + "</option>" +
+      values.map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + "</option>"; }).join("");
+  }
+
+  var COUNTRY_LABEL = { UK: "United Kingdom", UAE: "United Arab Emirates", USA: "United States" };
+
+  var verticals = Array.from(new Set(LEADS.map(function (l) { return l.vertical; }))).sort();
+  var countries = Array.from(new Set(LEADS.map(function (l) { return l.country; }))).sort();
+  fillSelect("fVertical", verticals, "All sectors");
+
+  var countrySel = document.getElementById("fCountry");
+  countrySel.innerHTML = '<option value="">All regions</option>' +
+    countries.map(function (c) {
+      return '<option value="' + esc(c) + '">' + esc(COUNTRY_LABEL[c] || c) + "</option>";
+    }).join("");
+  // Hide the picker entirely when there is nothing to switch between.
+  document.querySelector(".region-picker").hidden = countries.length <= 1;
+
+  function refreshCityOptions() {
+    var country = countrySel.value;
+    var scoped = country ? LEADS.filter(function (l) { return l.country === country; }) : LEADS;
+    var cities = Array.from(new Set(scoped.map(function (l) { return l.city; }))).sort();
+    var current = document.getElementById("fCity").value;
+    fillSelect("fCity", cities, "All cities");
+    if (cities.indexOf(current) !== -1) document.getElementById("fCity").value = current;
+  }
+  refreshCityOptions();
+  countrySel.addEventListener("change", refreshCityOptions);
+
+  function updateEyebrow() {
+    var country = countrySel.value;
+    var cities = Array.from(new Set(
+      (country ? LEADS.filter(function (l) { return l.country === country; }) : LEADS)
+        .map(function (l) { return l.city; })
+    ));
+    var label = country ? (COUNTRY_LABEL[country] || country) : "Multi-region";
+    document.getElementById("eyebrow").textContent =
+      cities.length === 1 ? cities[0] + " outreach pipeline" : label + " outreach pipeline";
+  }
+  updateEyebrow();
+  countrySel.addEventListener("change", updateEyebrow);
+
+  document.getElementById("footnote").innerHTML =
+    "Signal is a 0–100 estimate, not a fact: review count stands in for enquiry volume (55 pts), " +
+    "closing time for after-hours load (20), rating for whether the business can afford tooling (15), " +
+    "and a live website for digital maturity (10). " +
+    "Scraped from Google Maps &mdash; verify a listing is still trading before you pitch it. " +
+    "<strong>WhatsApp needs a mobile number</strong>: the number Maps lists is usually the reception " +
+    "landline, so each lead's website was also scanned for a <code>wa.me</code> link or mobile. " +
+    "Leads marked <em>Landline</em> have no WhatsApp route yet &mdash; call reception and ask for it. " +
+    "Status and notes save to this browser, and sync to the artifact when it can write.";
+
+  /* ---------- events ---------- */
+
+  /* Wire from FILTER_IDS itself so a new filter can never be added without
+     also being listened to. `change` covers selects that don't emit `input`. */
+  FILTER_IDS.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", render);
+    el.addEventListener("change", render);
+  });
+
+  document.querySelectorAll("th.sortable").forEach(function (th) {
+    function doSort() {
+      var k = th.dataset.sort;
+      if (sortKey === k) sortDir = -sortDir;
+      else { sortKey = k; sortDir = (k === "name") ? 1 : -1; }
+      render();
+    }
+    th.addEventListener("click", doSort);
+    th.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); doSort(); }
+    });
+  });
+
+  document.getElementById("rows").addEventListener("click", function (ev) {
+    var tr = ev.target.closest("tr");
+    if (!tr) return;
+    var lead = LEADS.find(function (l) { return l.id === tr.dataset.id; });
+    if (lead) openDrawer(lead);
+  });
+
+  document.getElementById("dPipeline").addEventListener("click", function (ev) {
+    var btn = ev.target.closest("button[data-status]");
+    if (!btn || !selected) return;
+    var e = entry(selected.id);
+    e.status = btn.dataset.status;
+    e.updatedAt = Date.now();
+    persist();
+    openDrawer(selected);
+  });
+
+  var noteTimer = null;
+  document.getElementById("dNote").addEventListener("input", function (ev) {
+    if (!selected) return;
+    var e = entry(selected.id);
+    e.note = ev.target.value;
+    e.updatedAt = Date.now();
+    if (noteTimer) clearTimeout(noteTimer);
+    noteTimer = setTimeout(persist, 400);
+  });
+
+  document.getElementById("copyMsg").addEventListener("click", function () {
+    if (selected) copy(pitchFor(selected), "Message");
+  });
+
+  document.getElementById("copyNum").addEventListener("click", function () {
+    if (!selected) return;
+    // Prefer the WhatsApp mobile when we found one — that's the one worth having.
+    if (isLive(selected)) copy("+" + selected.wa, "WhatsApp number");
+    else copy(selected.phone, "Number");
+  });
+
+  document.getElementById("copyEmail").addEventListener("click", function () {
+    if (selected && selected.email) copy(selected.email, "Email");
+  });
+
+  document.getElementById("clearBtn").addEventListener("click", clearFilters);
+
+  document.getElementById("closeBtn").addEventListener("click", closeDrawer);
+  document.getElementById("scrim").addEventListener("click", closeDrawer);
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && selected) closeDrawer();
+  });
+
+  /* theme toggle */
+  document.getElementById("themeBtn").addEventListener("click", function () {
+    var root = document.documentElement;
+    var now = root.getAttribute("data-theme");
+    var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var next = now ? (now === "dark" ? "light" : "dark") : (prefersDark ? "light" : "dark");
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("signalboard.theme", next); } catch (e) {}
+  });
+
+  try {
+    var savedTheme = localStorage.getItem("signalboard.theme");
+    if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
+  } catch (e) {}
+
+  /* export */
+  document.getElementById("exportBtn").addEventListener("click", function () {
+    var list = filtered();
+    var head = ["name", "country", "sector", "type", "city", "phone", "whatsapp",
+                "whatsapp_source", "email", "website", "address", "reviews", "rating",
+                "closes", "signal", "band", "status", "note"];
+    var lines = [head.join(",")].concat(list.map(function (l) {
+      var e = track[l.id] || {};
+      return [l.name, l.country, l.vertical, l.type, l.city, l.phone,
+              l.wa ? "+" + l.wa : "", l.waSrc || "none",
+              l.email || "", l.website, l.address,
+              l.reviews, l.rating || "", fmtClose(l.closes), l.score, l.band,
+              statusOf(l.id), e.note || ""]
+        .map(function (v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; })
+        .join(",");
+    }));
+    var csv = lines.join("\n");
+    var name = "signal-board-" + new Date().toISOString().slice(0, 10) + ".csv";
+
+    if (window.claude && typeof window.claude.use === "function") {
+      window.claude.use("downloads").then(function (d) {
+        if (!d) { copy(csv, "CSV"); return; }
+        d.save({ filename: name, data: csv }).then(function () { toast("CSV saved"); })
+          .catch(function () { toast("Download declined"); });
+      }).catch(function () { copy(csv, "CSV"); });
+    } else {
+      copy(csv, "CSV");
+    }
+  });
+
+  render();
+  renderSaveState(saveNote);
+})();
+</script>
