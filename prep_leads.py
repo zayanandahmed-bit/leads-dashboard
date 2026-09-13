@@ -67,6 +67,7 @@ COUNTRIES = {
     "uk": {
         "cc": "44",
         "mobile_re": re.compile(r"^447\d{9}$"),
+        "valid_len": {12},  # "44" + 10-digit national number (mobile or landline)
         "cities": ["London", "Manchester", "Birmingham", "Leeds", "Glasgow",
                    "Liverpool", "Bristol", "Sheffield", "Edinburgh", "Cardiff",
                    "Nottingham", "Newcastle"],
@@ -78,6 +79,10 @@ COUNTRIES = {
         # UAE mobiles: 05X XXX XXXX nationally -> 971 5X XXXXXXX (5 is the
         # mobile lead digit; 0-prefixed 50/52/54/55/56/58 ranges).
         "mobile_re": re.compile(r"^9715[0245689]\d{7}$"),
+        # UAE, unlike UK/USA, has two valid national lengths: a mobile is
+        # "971" + 9 digits (12 total) but a landline is only 8 digits
+        # nationally ("971" + single-digit area code + 7 local = 11 total).
+        "valid_len": {11, 12},
         "cities": ["Dubai", "Abu Dhabi"],
         "strip": re.compile(r"\bP\.?O\.?\s*Box\s*\d+\b", re.I),
         "drop_tokens": ("united arab emirates", "uae"),
@@ -87,8 +92,11 @@ COUNTRIES = {
         # NANP has no reserved mobile range — a landline and a mobile are the
         # same shape (1 + 10 digits). We can't tell them apart from the
         # number alone, so treat every valid number as a candidate and let
-        # Evolution be the actual judge, rather than guessing "mobile".
-        "mobile_re": re.compile(r"^1\d{10}$"),
+        # Evolution be the actual judge, rather than guessing "mobile". Still
+        # requires real NANP structure (area/exchange code can't start 0/1) —
+        # otherwise a garbage digit run from Maps gets treated as a candidate.
+        "mobile_re": re.compile(r"^1[2-9]\d{2}[2-9]\d{6}$"),
+        "valid_len": {11},  # "1" + 10-digit NANP number
         # Every city the nationwide scrape searched, longest names first so
         # "North Las Vegas" wins over "Las Vegas" and "West Fargo" over "Fargo".
         "cities": sorted({c for cs in USA_CITIES.values() for c in cs}
@@ -326,7 +334,11 @@ def main(paths, out_path, enrich_path="whatsapp.json", country_key="uk"):
         if found:
             candidates.append((found["wa"], found["src"]))
         listed = to_e164(phone, cc)
-        if listed and listed.startswith(cc) and 9 <= len(listed) <= 13:
+        # Exact length per country, not a loose 9-13 range: a generic range
+        # let junk like an appended extension digit ("...1235 ext. 5" -> a
+        # 12-digit US string) through as a "landline" candidate even though
+        # it was never a real number to begin with.
+        if listed and listed.startswith(cc) and len(listed) in country["valid_len"]:
             is_mobile = bool(country["mobile_re"].match(listed))
             candidates.append((listed, "listed" if is_mobile else "listed-landline"))
 

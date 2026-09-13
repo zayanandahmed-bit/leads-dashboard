@@ -58,7 +58,12 @@ COUNTRY_PATTERNS = {
             r"(?:\+?1[\s\-.]*)?\(?\d{3}\)?[\s\-.]*\d{3}[\s\-.]*\d{4}\b"
         ),
         "cc": "1",
-        "e164_re": re.compile(r"^1\d{10}$"),
+        # NANP structure, not just "11 digits": area code and exchange code
+        # each must start 2-9. Without this, the loose mobile_re above
+        # matches ANY 10-digit run on a page — zip+something, tracking IDs,
+        # "1-800-000-0000" placeholders — and enrichment quietly "finds" a
+        # WhatsApp number that was never a phone number at all.
+        "e164_re": re.compile(r"^1[2-9]\d{2}[2-9]\d{6}$"),
     },
 }
 

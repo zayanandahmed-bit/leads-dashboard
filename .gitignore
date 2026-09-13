@@ -16,6 +16,7 @@ venv/
 *_leads_master.csv
 whatsapp*.json
 wa_verified.json
+wa_redirect_checked.json
 test_london_dentists.csv
 
 # Per-search raw output from the nationwide US scrape (run_usa_national.py) —
