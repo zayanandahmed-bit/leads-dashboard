@@ -308,7 +308,13 @@ def main(paths, out_path, enrich_path="whatsapp.json", country_key="uk"):
 
         # The listed number is usually the reception landline, which is never
         # on WhatsApp. Prefer a mobile discovered on the business's own site.
+        # enrichment.get() returns a record for every scanned site, even one
+        # where nothing was found ({"wa": "", "src": "none"}) — that record is
+        # truthy, so it must never stand in for "found a number" on its own,
+        # or a scanned-but-empty site silently loses its listed fallback.
         found = enrichment.get(lookup_site) if lookup_site else None
+        if found and not found.get("wa"):
+            found = None  # scanned, nothing found — not a real candidate
         if found and found["wa"] in shared_numbers:
             found = None  # third-party number, not this business's
 
