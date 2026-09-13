@@ -679,6 +679,7 @@
       <option value="watch">Watch only</option>
     </select>
     <select id="fVertical" autocomplete="off" aria-label="Filter by sector"></select>
+    <select id="fState" autocomplete="off" aria-label="Filter by state"></select>
     <select id="fCity" autocomplete="off" aria-label="Filter by city"></select>
     <select id="fStatus" autocomplete="off" aria-label="Filter by pipeline status">
       <option value="">Any status</option>
@@ -1012,7 +1013,7 @@
   var sortDir = -1;
   var selected = null;
 
-  var FILTER_IDS = ["q", "fCountry", "fBand", "fVertical", "fCity", "fStatus", "fWa", "fEmail"];
+  var FILTER_IDS = ["q", "fCountry", "fBand", "fVertical", "fState", "fCity", "fStatus", "fWa", "fEmail"];
 
   function anyFilterSet() {
     return FILTER_IDS.some(function (id) {
@@ -1045,6 +1046,7 @@
     var country = document.getElementById("fCountry").value;
     var band = document.getElementById("fBand").value;
     var vert = document.getElementById("fVertical").value;
+    var state = document.getElementById("fState").value;
     var city = document.getElementById("fCity").value;
     var stat = document.getElementById("fStatus").value;
     var wa = document.getElementById("fWa").value;
@@ -1058,6 +1060,7 @@
       if (email === "no" && l.email) return false;
       if (band && l.band !== band) return false;
       if (vert && l.vertical !== vert) return false;
+      if (state && l.state !== state) return false;
       if (city && l.city !== city) return false;
       if (stat && statusOf(l.id) !== stat) return false;
       if (q) {
@@ -1296,9 +1299,18 @@
   // Hide the picker entirely when there is nothing to switch between.
   document.querySelector(".region-picker").hidden = countries.length <= 1;
 
+  var stateSel = document.getElementById("fState");
+
+  // US-only: states narrow the city list. Hidden when no lead in scope has one.
   function refreshCityOptions() {
     var country = countrySel.value;
     var scoped = country ? LEADS.filter(function (l) { return l.country === country; }) : LEADS;
+    var states = Array.from(new Set(scoped.map(function (l) { return l.state; }).filter(Boolean))).sort();
+    var curState = stateSel.value;
+    fillSelect("fState", states, "All states");
+    stateSel.value = states.indexOf(curState) !== -1 ? curState : "";
+    stateSel.hidden = states.length === 0;
+    if (stateSel.value) scoped = scoped.filter(function (l) { return l.state === stateSel.value; });
     var cities = Array.from(new Set(scoped.map(function (l) { return l.city; }))).sort();
     var current = document.getElementById("fCity").value;
     fillSelect("fCity", cities, "All cities");
@@ -1306,6 +1318,7 @@
   }
   refreshCityOptions();
   countrySel.addEventListener("change", refreshCityOptions);
+  stateSel.addEventListener("change", refreshCityOptions);
 
   function updateEyebrow() {
     var country = countrySel.value;

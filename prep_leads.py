@@ -13,6 +13,8 @@ import math
 import re
 import sys
 
+from usa_cities import USA_CITIES
+
 # Order matters: the first rule that matches wins, so the more specific
 # sectors are listed before the catch-all clinical ones. Verticals themselves
 # are universal — dentists and salons look the same everywhere — only the
@@ -87,9 +89,13 @@ COUNTRIES = {
         # number alone, so treat every valid number as a candidate and let
         # Evolution be the actual judge, rather than guessing "mobile".
         "mobile_re": re.compile(r"^1\d{10}$"),
-        "cities": ["Miami", "Hialeah", "Fort Lauderdale", "Houston", "Dallas",
-                   "Los Angeles", "New York", "Newark", "Jersey City"],
+        # Every city the nationwide scrape searched, longest names first so
+        # "North Las Vegas" wins over "Las Vegas" and "West Fargo" over "Fargo".
+        "cities": sorted({c for cs in USA_CITIES.values() for c in cs}
+                         | {"Hialeah", "Fort Lauderdale"}, key=len, reverse=True),
         "strip": re.compile(r"\b\d{5}(-\d{4})?\b"),  # ZIP / ZIP+4
+        # "..., Coral Gables, FL 33134" -> the segment right before "ST ZIP".
+        "city_re": re.compile(r"([^,]+),\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\b"),
         "drop_tokens": ("united states", "usa", "us"),
     },
 }
@@ -108,6 +114,14 @@ def to_e164(raw: str, cc: str) -> str:
 
 
 def derive_city(address: str, country: dict) -> str:
+    # Prefer the address's own structure where the country has a reliable one;
+    # street names like "Washington St" make a whole-address name search lie.
+    if country.get("city_re"):
+        m = country["city_re"].search(address)
+        if m:
+            town = m.group(1).strip()
+            if 2 < len(town) <= 30 and not re.match(r"^\d", town):
+                return town
     for city in country["cities"]:
         if re.search(rf"\b{re.escape(city)}\b", address, re.I):
             return city
@@ -328,11 +342,19 @@ def main(paths, out_path, enrich_path="whatsapp.json", country_key="uk"):
 
         email = (enrichment.get(lookup_site, {}).get("email") if lookup_site else "") or ""
 
+        # US addresses end "City, ST 12345" — the state code is right before the ZIP.
+        state = ""
+        if country_key == "usa":
+            m = re.search(r",\s*([A-Z]{2})\s+\d{5}(?:-\d{4})?\b", address)
+            if m and m.group(1) in USA_CITIES:
+                state = m.group(1)
+
         seen[key] = {
             "id": key,
             "name": name,
             "country": country_key.upper(),
             "address": address,
+            "state": state,
             "city": city,
             "vertical": derive_vertical(r.get("place_type") or ""),
             "type": (r.get("place_type") or "").strip(),

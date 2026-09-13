@@ -12,6 +12,7 @@ country and merges the results into a single leads.json for the page,
 tagged with a "country" field the dashboard filters on.
 """
 
+import glob
 import json
 import subprocess
 import sys
@@ -45,6 +46,9 @@ def main(args):
     all_leads = []
     for key in countries:
         sources = args if (args and len(countries) == 1) else [DEFAULT_CSV[key]]
+        if key == "usa" and not args:
+            # The nationwide run writes one CSV per search into raw_usa/.
+            sources += sorted(glob.glob("raw_usa/*.csv"))
         try:
             all_leads.extend(build_one(key, sources))
         except subprocess.CalledProcessError:

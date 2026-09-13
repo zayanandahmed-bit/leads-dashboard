@@ -18,3 +18,9 @@ whatsapp*.json
 wa_verified.json
 test_london_dentists.csv
 
+# Per-search raw output from the nationwide US scrape (run_usa_national.py) —
+# same reasoning: regenerable, and no need to version raw per-search rows.
+raw_usa/
+raw_usa_run.log
+*.bak
+

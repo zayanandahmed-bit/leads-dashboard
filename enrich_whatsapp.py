@@ -240,5 +240,6 @@ if __name__ == "__main__":
             a.remove(flag)
     default_leads = f"/tmp/leads_{country_key}.json" if country_key != "uk" else "/tmp/leads.json"
     default_out = f"whatsapp_{country_key}.json" if country_key != "uk" else "whatsapp.json"
+    workers = int(a[2]) if len(a) > 2 else 16
     main(a[0] if a else default_leads, a[1] if len(a) > 1 else default_out,
-         country_key=country_key)
+         country_key=country_key, workers=workers)

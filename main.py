@@ -108,22 +108,43 @@ def extract_place(page: Page) -> Place:
                 place.opens_at = opens_at2_raw.replace("\u202f","")
     return place
 
-def scrape_places(search_for: str, total: int) -> List[Place]:
+class BlockedByGoogle(Exception):
+    """Google served a CAPTCHA / unusual-traffic page. Never try to get past
+    it — stop, and let the batch runner pause everything."""
+
+
+def check_not_blocked(page: Page):
+    if "/sorry/" in page.url or page.locator("text=unusual traffic").count() > 0:
+        raise BlockedByGoogle(page.url)
+
+
+def scrape_places(search_for: str, total: int, headless: bool = False) -> List[Place]:
     setup_logging()
     places: List[Place] = []
     with sync_playwright() as p:
         if platform.system() == "Windows":
             browser_path = r"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-            browser = p.chromium.launch(executable_path=browser_path, headless=False)
+            browser = p.chromium.launch(executable_path=browser_path, headless=headless)
         else:
-            browser = p.chromium.launch(headless=False)
-        page = browser.new_page()
+            browser = p.chromium.launch(headless=headless)
+        # A real desktop viewport + locale: headless defaults (800x600, no
+        # locale) make Maps serve a cramped list that loads fewer results.
+        page = browser.new_page(viewport={"width": 1366, "height": 900}, locale="en-US")
         try:
-            page.goto("https://www.google.com/maps/@32.9817464,70.1930781,3.67z?", timeout=60000)
+            page.goto("https://www.google.com/maps/@32.9817464,70.1930781,3.67z?hl=en", timeout=60000)
             page.wait_for_timeout(1000)
+            check_not_blocked(page)
             page.locator("//form[contains(@jsaction,'searchboxFormSubmit')]//input[@name='q']").fill(search_for)
             page.keyboard.press("Enter")
-            page.wait_for_selector('//a[contains(@href, "https://www.google.com/maps/place")]')
+            try:
+                page.wait_for_selector('//a[contains(@href, "https://www.google.com/maps/place")]', timeout=20000)
+            except Exception:
+                # No results list: either blocked, or a small town with nothing
+                # (or a single exact match). Blocked raises; otherwise it's a
+                # genuine empty result, not a failure worth retrying.
+                check_not_blocked(page)
+                logging.info("No result list for this search")
+                return places
             page.hover('//a[contains(@href, "https://www.google.com/maps/place")]')
             previously_counted = 0
             stagnant_rounds = 0
@@ -180,12 +201,17 @@ def main():
     parser.add_argument("-t", "--total", type=int, help="Total number of results to scrape")
     parser.add_argument("-o", "--output", type=str, default="result.csv", help="Output CSV file path")
     parser.add_argument("--append", action="store_true", help="Append results to the output file instead of overwriting")
+    parser.add_argument("--headless", action="store_true", help="Run the browser without a visible window")
     args = parser.parse_args()
     search_for = args.search or "turkish stores in toronto Canada"
     total = args.total or 1
     output_path = args.output
     append = args.append
-    places = scrape_places(search_for, total)
+    try:
+        places = scrape_places(search_for, total, headless=args.headless)
+    except BlockedByGoogle as e:
+        logging.error(f"Blocked by Google (CAPTCHA/unusual traffic): {e}")
+        raise SystemExit(3)
     save_places_to_csv(places, output_path, append=append)
 
 if __name__ == "__main__":
