@@ -270,6 +270,30 @@ def main(paths, out_path, enrich_path="whatsapp.json", country_key="uk"):
         print(f"dropping {len(shared_numbers)} numbers found on multiple "
               f"unrelated sites (third-party/agency numbers)")
 
+    # Same problem, same fix, for email domains: a domain that shows up on
+    # many unrelated businesses' sites isn't any one of theirs — it's a
+    # platform/CRM/template/font-license address in shared boilerplate
+    # (a real-estate platform's own domain, a website builder's default
+    # contact, a font vendor's licence comment). A personal-webmail domain
+    # legitimately repeats across unrelated businesses, so those are exempt.
+    PERSONAL_EMAIL_DOMAINS = {
+        "gmail.com", "yahoo.com", "icloud.com", "aol.com", "outlook.com",
+        "hotmail.com", "live.com", "msn.com", "protonmail.com", "me.com",
+        "comcast.net", "att.net", "verizon.net",
+    }
+    domain_sites = {}
+    for site, rec in enrichment.items():
+        email = (rec.get("email") or "").lower()
+        if email and "@" in email:
+            domain_sites.setdefault(email.split("@")[1], set()).add(site)
+    shared_email_domains = {
+        d for d, sites in domain_sites.items()
+        if len(sites) > 2 and d not in PERSONAL_EMAIL_DOMAINS
+    }
+    if shared_email_domains:
+        print(f"dropping emails at {len(shared_email_domains)} shared/template domains "
+              f"(platform or vendor addresses, not the business's own)")
+
     # Ground truth from Evolution API, when it's been run.
     try:
         with open("wa_verified.json", encoding="utf-8") as f:
@@ -278,6 +302,20 @@ def main(paths, out_path, enrich_path="whatsapp.json", country_key="uk"):
         print(f"loaded {len(verified)} Evolution checks — {live} confirmed on WhatsApp")
     except (FileNotFoundError, json.JSONDecodeError):
         verified = {}
+
+    # Supplementary check via the public wa.me page (wa_redirect_check.py).
+    # true  = a profile name showed up — as reliable as Evolution's "yes".
+    # false = only the number echoed back — genuinely inconclusive, NOT a
+    #         "no" (a real account with a private profile looks identical
+    #         to an unregistered one on this page). Never used to rule a
+    #         number out, only to add extra confirmed positives.
+    try:
+        with open("wa_redirect_checked.json", encoding="utf-8") as f:
+            redirect_checked = json.load(f)
+        confirmed = sum(1 for v in redirect_checked.values() if v)
+        print(f"loaded {len(redirect_checked)} wa.me checks — {confirmed} confirmed by profile name")
+    except (FileNotFoundError, json.JSONDecodeError):
+        redirect_checked = {}
 
     for r in raw:
         name = (r.get("name") or "").strip()
@@ -343,11 +381,15 @@ def main(paths, out_path, enrich_path="whatsapp.json", country_key="uk"):
             candidates.append((listed, "listed" if is_mobile else "listed-landline"))
 
         wa_number, wa_source = "", "none"
-        # Prefer any candidate Evolution has confirmed; fall back to the first
-        # unchecked one so nothing silently disappears before verification.
+        # Prefer any candidate Evolution or the wa.me name-check has already
+        # confirmed positive; fall back to the first unchecked one so nothing
+        # silently disappears before verification.
         for num, src in candidates:
             if verified.get(num) is True:
                 wa_number, wa_source = num, "verified"
+                break
+            if redirect_checked.get(num) is True:
+                wa_number, wa_source = num, "confirmed-wa.me"
                 break
         else:
             for num, src in candidates:
@@ -358,7 +400,16 @@ def main(paths, out_path, enrich_path="whatsapp.json", country_key="uk"):
                 if candidates:
                     wa_number, wa_source = candidates[0][0], "not-registered"
 
+        # A number the wa.me check actually looked at but couldn't confirm
+        # (no profile name shown — genuinely inconclusive, not a "no", see
+        # the loader comment above) stays exactly as unchecked as before,
+        # but this flag lets the drawer say "we did try this one" honestly.
+        wa_redirect_tried = (wa_source not in ("verified", "confirmed-wa.me", "not-registered")
+                              and redirect_checked.get(wa_number) is False)
+
         email = (enrichment.get(lookup_site, {}).get("email") if lookup_site else "") or ""
+        if email and email.split("@")[-1] in shared_email_domains:
+            email = ""  # platform/vendor address, not this business's own
 
         # US addresses end "City, ST 12345" — the state code is right before the ZIP.
         state = ""
@@ -381,6 +432,7 @@ def main(paths, out_path, enrich_path="whatsapp.json", country_key="uk"):
             "email": email,
             "wa": wa_number,
             "waSrc": wa_source,
+            "waTried": wa_redirect_tried,
             "reviews": reviews,
             "rating": rating,
             "closes": close_h,

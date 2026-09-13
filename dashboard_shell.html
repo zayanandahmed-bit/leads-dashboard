@@ -964,13 +964,13 @@
   /* Four states, no guess-tiers: either it's checked, or it isn't.
      How the number was found stays in the drawer for anyone who wants it. */
   function waClass(l) {
-    if (l.waSrc === "verified") return "wa-yes";
+    if (l.waSrc === "verified" || l.waSrc === "confirmed-wa.me") return "wa-yes";
     if (!isLive(l)) return "wa-no";
     return "wa-maybe";
   }
 
   function waLabel(l) {
-    if (l.waSrc === "verified") return "Verified";
+    if (l.waSrc === "verified" || l.waSrc === "confirmed-wa.me") return "Verified";
     // A landline and a confirmed-dead mobile are the same outcome: you can't
     // reach them on WhatsApp. The reason lives in the drawer.
     if (!isLive(l)) return "No WhatsApp";
@@ -980,11 +980,16 @@
   function waDetail(l) {
     if (!l.wa) return "No WhatsApp number found";
     if (l.waSrc === "verified") return "Confirmed on WhatsApp by Evolution API";
+    if (l.waSrc === "confirmed-wa.me") return "Confirmed on WhatsApp — their profile name showed up on wa.me";
     if (l.waSrc === "not-registered") return "Evolution API checked this number — it is not on WhatsApp";
     if (l.waSrc === "wa.me") return "Has a WhatsApp click-to-chat link on their site";
     if (l.waSrc === "wa-context") return "Published beside the word “WhatsApp” on their site";
-    if (l.waSrc === "listed") return "Mobile listed on Google Maps";
-    return "Mobile found on their site, no WhatsApp wording nearby";
+    var base = l.waSrc === "listed" ? "Mobile listed on Google Maps"
+      : "Mobile found on their site, no WhatsApp wording nearby";
+    // Checked via wa.me and came back inconclusive — NOT the same as "no".
+    // Could be a real account with a private profile; could be dead. Say so.
+    if (l.waTried) return base + " — checked on wa.me, no name shown (could go either way, not ruled out)";
+    return base;
   }
 
   function statusLabel(id) {
@@ -1094,7 +1099,9 @@
     var lateOpen = scope.filter(function (l) { return l.closes !== null && l.closes >= 19; }).length;
 
     var reachable = scope.filter(isLive).length;              // verified OR unchecked-but-has-a-number
-    var verifiedCount = scope.filter(function (l) { return l.waSrc === "verified"; }).length;
+    var verifiedCount = scope.filter(function (l) {
+      return l.waSrc === "verified" || l.waSrc === "confirmed-wa.me";
+    }).length;
     var uncheckedLive = reachable - verifiedCount;
 
     // The headline number is always "reachable" — the same definition in

@@ -126,9 +126,13 @@ def check_accuracy(wa_verified_path="wa_verified.json", sample=20):
 
 
 def run_batch(leads_path, out_path, limit, wa_verified_path="wa_verified.json"):
-    """Only ever records POSITIVE confirmations (a name was shown). A
-    generic-page result is dropped, not saved as a negative — see the
-    module docstring for why that signal can't be trusted as a "no"."""
+    """Records BOTH outcomes, but they mean different things:
+      true  = a profile name showed — reliable confirmation, as good as Evolution.
+      false = only the number echoed back — recorded so the dashboard can say
+              "we checked, no name" honestly, but NEVER treated as "not on
+              WhatsApp" (see module docstring — a real, privacy-locked
+              account looks identical). Errors/rate-limits/invalid formats
+              (None) are not recorded at all — genuinely not attempted."""
     leads = json.load(open(leads_path, encoding="utf-8"))
     verified = load_json(wa_verified_path, {})
     results = load_json(out_path, {})
@@ -159,18 +163,23 @@ def run_batch(leads_path, out_path, limit, wa_verified_path="wa_verified.json"):
                 print(f"  error on {number}: {e}", flush=True)
             done += 1
             if got is True:
-                results[number] = True  # only positives get written — see docstring
+                results[number] = True
                 confirmed += 1
+            elif got is False:
+                results[number] = False  # checked, inconclusive — NOT "not on WhatsApp"
+            # got is None (error/rate-limited/invalid format): not recorded, genuinely untried
             if done % 10 == 0:
                 save_json(out_path, results)
-                print(f"  {done}/{len(todo)} checked — {confirmed} newly confirmed on WhatsApp "
-                      f"(everything else stays unchecked, not marked dead)", flush=True)
+                inconclusive_so_far = sum(1 for v in results.values() if v is False)
+                print(f"  {done}/{len(todo)} checked — {confirmed} confirmed on WhatsApp, "
+                      f"{inconclusive_so_far} inconclusive (name hidden or not registered — can't tell)", flush=True)
             time.sleep(random.uniform(MIN_DELAY, MAX_DELAY))
         browser.close()
 
     save_json(out_path, results)
-    print(f"\nchecked {done}, confirmed {confirmed} new positives — "
-          f"saved {len(results)} total confirmed numbers to {out_path}", flush=True)
+    inconclusive = sum(1 for v in results.values() if v is False)
+    print(f"\nchecked {done} — {confirmed} newly confirmed, {inconclusive} inconclusive — "
+          f"saved {len(results)} total results to {out_path}", flush=True)
 
 
 if __name__ == "__main__":

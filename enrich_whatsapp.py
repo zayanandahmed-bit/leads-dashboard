@@ -70,9 +70,13 @@ COUNTRY_PATTERNS = {
 EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 
 # Junk that matches the email pattern but isn't a real contact address.
+# Template placeholders ("user@domain.com") turned out to be ~11% of every
+# email this scanner found — @domain\. below catches the whole family
+# regardless of local part, not just the couple of examples first noticed.
 EMAIL_JUNK = re.compile(
     r"\.(png|jpe?g|gif|svg|webp|css|js)$|"
-    r"^(example|test|user|name|you|info)@example\.|"
+    r"@(example|domain|yourdomain|yoursite|yourcompany|mysite|mystore|"
+    r"company|address|email|test)\.(com|net|org)$|"
     r"sentry\.io|wixpress\.com|schema\.org|w3\.org",
     re.I,
 )
