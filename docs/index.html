@@ -622,13 +622,28 @@
 
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+  /* Pinned to the bottom of the window: every page is a different height,
+     so a pager sitting under the table landed somewhere new after each
+     click and the buttons jumped away from the cursor. */
   .pager {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
     display: flex;
     align-items: center;
     gap: 14px;
-    margin: 10px 0 4px;
+    margin: 0;
+    padding: 10px 0;
+    background: var(--ground);
+    border-top: 1px solid var(--line);
     font-size: 13px;
     color: var(--ink-muted);
+  }
+  #pagerLabel {
+    min-width: 17ch;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
   .pager button {
     font: inherit;
@@ -943,13 +958,71 @@
   .cs-controls button { min-width: 88px; }
   #csMute[aria-pressed="true"] { background: var(--strong-soft); border-color: var(--strong); color: var(--strong); }
 
-  .cs-keypad { display: grid; grid-template-columns: repeat(3, 58px); gap: 6px; margin-top: 4px; }
-  .cs-keypad button { font-family: var(--font-mono); font-size: 18px; padding: 8px 0; }
+  .cs-pad {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+  }
 
-  .cs-manual summary { cursor: pointer; font-size: 13px; color: var(--ink-soft); }
-  .cs-manual[open] summary { margin-bottom: 8px; }
-  .cs-manual-row { display: flex; gap: 8px; margin-bottom: 6px; }
-  .cs-manual-row button { flex: none; }
+  .cs-pad-inner { width: 100%; max-width: 320px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+  .cs-pad-display { display: flex; gap: 6px; }
+
+  #viewCalls .cs-pad-display input {
+    font-family: var(--font-mono);
+    font-size: 21px;
+    letter-spacing: .03em;
+    text-align: center;
+    padding: 10px 8px;
+  }
+
+  .cs-pad-back { flex: none; width: 48px; font-size: 18px; padding: 0; }
+  .cs-pad-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+  .cs-pad-keys button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 56px;
+    padding: 4px 0;
+    border-radius: 12px;
+    font-family: var(--font-mono);
+    font-size: 23px;
+    line-height: 1;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  .cs-pad-keys button small {
+    margin-top: 3px;
+    font-family: var(--font-body);
+    font-size: 9.5px;
+    letter-spacing: .16em;
+    color: var(--ink-muted);
+    min-height: 1em;
+  }
+
+  .cs-pad-keys button.is-pressed { background: var(--accent-soft); border-color: var(--accent); }
+  .cs-pad-actions { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 8px; }
+  .cs-pad-actions button { height: 48px; font-size: 15px; }
+  .cs-pad .cs-hint { text-align: center; }
+
+  .btn-call { background: var(--st-won); border-color: var(--st-won); color: #FFFFFF; font-weight: 600; }
+  .btn-call:hover { background: var(--st-won); border-color: var(--st-won); filter: brightness(.92); }
+  .btn-call:disabled,
+  .btn-call:disabled:hover { background: var(--st-won); border-color: var(--st-won); filter: none; }
+
+  /* The dark palette's green/red are light tints — white text on them is
+     unreadable, so flip to dark ink there. */
+  :root[data-theme="dark"] .btn-call,
+  :root[data-theme="dark"] .btn-danger { color: #0C1213; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .btn-call,
+    :root:not([data-theme="light"]) .btn-danger { color: #0C1213; }
+  }
 
   .cs-script { font-size: 13.5px; line-height: 1.55; border-top: 1px solid var(--line); padding-top: 12px; }
 
@@ -987,7 +1060,53 @@
   .cs-toggle-strong { font-weight: 500; color: var(--ink); }
 
   .cs-history ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-  .cs-history li { font-size: 12.5px; }
+  .cs-history li { font-size: 12.5px; display: flex; align-items: flex-start; gap: 6px; }
+  .cs-history li > div { flex: 1; min-width: 0; }
+
+  .cs-q-more { padding: 12px 8px; text-align: center; font-size: 12px; color: var(--ink-muted); }
+
+  .cs-del {
+    flex: none;
+    padding: 1px 8px;
+    font-size: 16px;
+    line-height: 1.3;
+    color: var(--ink-muted);
+    background: transparent;
+    border-color: transparent;
+  }
+  .cs-del:hover { color: var(--st-lost); border-color: var(--st-lost); background: transparent; }
+
+  .cs-link-danger {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--st-lost);
+    font-size: 12.5px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .cs-link-danger:hover { background: none; }
+
+  .cs-undo {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 70;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 92vw;
+    padding: 9px 10px 9px 16px;
+    border-radius: 8px;
+    background: var(--ink);
+    color: var(--surface);
+    box-shadow: var(--shadow);
+    font-size: 13.5px;
+  }
+  .cs-undo button { background: transparent; color: inherit; border-color: currentColor; font-weight: 600; }
+  .cs-undo button:hover { background: transparent; opacity: .8; }
   .cs-history .num { color: var(--ink-muted); margin-right: 4px; }
 
   .cs-log-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -1214,25 +1333,38 @@
           <div class="cs-call-number num" id="csCallNumber"></div>
           <div class="cs-controls">
             <button type="button" id="csMute" aria-pressed="false" disabled>Mute</button>
-            <button type="button" id="csKeypadBtn" aria-expanded="false" aria-controls="csKeypad" disabled>Keypad</button>
             <button type="button" id="csHangup" class="btn-danger" disabled>Hang up</button>
-          </div>
-          <div class="cs-keypad" id="csKeypad" hidden>
-            <button type="button" data-digit="1">1</button><button type="button" data-digit="2">2</button><button type="button" data-digit="3">3</button>
-            <button type="button" data-digit="4">4</button><button type="button" data-digit="5">5</button><button type="button" data-digit="6">6</button>
-            <button type="button" data-digit="7">7</button><button type="button" data-digit="8">8</button><button type="button" data-digit="9">9</button>
-            <button type="button" data-digit="*">*</button><button type="button" data-digit="0">0</button><button type="button" data-digit="#">#</button>
           </div>
         </div>
 
-        <details class="cs-manual">
-          <summary>Dial a number manually</summary>
-          <div class="cs-manual-row">
-            <input type="tel" id="csManualNum" autocomplete="off" placeholder="+44 20 7946 0000" aria-label="Number to dial">
-            <button type="button" id="csManualCall">Call</button>
+        <section class="cs-pad" aria-label="Dial pad">
+          <div class="cs-pad-inner">
+            <div class="cs-pad-display">
+              <input type="tel" id="csManualNum" autocomplete="off" inputmode="tel" placeholder="+44 20 7946 0000" aria-label="Number to dial">
+              <button type="button" class="cs-pad-back" id="csPadBack" aria-label="Delete last digit">&#9003;</button>
+            </div>
+            <div class="cs-pad-keys" id="csPadKeys">
+              <button type="button" data-key="1">1<small></small></button>
+              <button type="button" data-key="2">2<small>ABC</small></button>
+              <button type="button" data-key="3">3<small>DEF</small></button>
+              <button type="button" data-key="4">4<small>GHI</small></button>
+              <button type="button" data-key="5">5<small>JKL</small></button>
+              <button type="button" data-key="6">6<small>MNO</small></button>
+              <button type="button" data-key="7">7<small>PQRS</small></button>
+              <button type="button" data-key="8">8<small>TUV</small></button>
+              <button type="button" data-key="9">9<small>WXYZ</small></button>
+              <button type="button" data-key="*">*<small></small></button>
+              <button type="button" data-key="0" title="Hold for +">0<small>+</small></button>
+              <button type="button" data-key="#">#<small></small></button>
+            </div>
+            <div class="cs-pad-actions">
+              <button type="button" id="csPadPlus" aria-label="Add plus sign">+</button>
+              <button type="button" id="csManualCall" class="btn-call" disabled>Call</button>
+              <button type="button" id="csPadClear">Clear</button>
+            </div>
+            <p class="cs-hint" id="csPadHint"></p>
           </div>
-          <p class="cs-hint">Use the international format (+44&hellip;). A number starting with 0 is treated as UK. If a lead is open, the call is logged against it.</p>
-        </details>
+        </section>
 
         <div class="cs-script">
           <p class="section-label">Call script</p>
@@ -1256,6 +1388,7 @@
           <button type="button" id="csSave" disabled>Save</button>
           <button type="button" id="csSaveNext" class="btn-primary" disabled>Save &amp; next</button>
         </div>
+        <button type="button" class="cs-link-danger" id="csDiscard" hidden>Discard this call &mdash; don't log it</button>
         <label class="cs-toggle"><input type="checkbox" id="csAutoDial"> Auto-dial the next lead after saving</label>
         <p class="cs-hint" id="csOutcomeHint"></p>
         <div class="cs-history">
@@ -1276,7 +1409,7 @@
       <div class="table-scroll">
         <table class="cs-log-table">
           <thead>
-            <tr><th>When</th><th>Business</th><th>Line</th><th>Ring</th><th>Talk</th><th>Outcome</th><th>Notes</th><th>By</th></tr>
+            <tr><th>When</th><th>Business</th><th>Line</th><th>Ring</th><th>Talk</th><th>Outcome</th><th>Notes</th><th>By</th><th aria-label="Remove call"></th></tr>
           </thead>
           <tbody id="csLogRows"></tbody>
         </table>
@@ -1385,6 +1518,11 @@
     </div>
   </form>
 </dialog>
+
+<div class="cs-undo" id="csUndo" role="status" aria-live="polite" hidden>
+  <span id="csUndoText"></span>
+  <button type="button" id="csUndoBtn">Undo</button>
+</div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -2023,11 +2161,20 @@
     });
   });
 
+  // The pager is pinned to the bottom of the window, so the buttons stay
+  // under the cursor; bring the table's first row back into view so the
+  // new page reads from the top.
+  function goToPage(n) {
+    page = n;
+    render();
+    var top = document.querySelector("#viewLeads .table-shell").getBoundingClientRect().top;
+    if (top < 0) window.scrollBy(0, top - 12);
+  }
   document.getElementById("pagerPrev").addEventListener("click", function () {
-    if (page > 1) { page--; render(); document.querySelector(".table-scroll").scrollTop = 0; }
+    if (page > 1) goToPage(page - 1);
   });
   document.getElementById("pagerNext").addEventListener("click", function () {
-    page++; render(); document.querySelector(".table-scroll").scrollTop = 0;
+    goToPage(page + 1);
   });
 
   document.getElementById("rows").addEventListener("click", function (ev) {
@@ -2204,6 +2351,13 @@
   );
   var csLogs = csLoadJson(CS_LOG_KEY, []);
   if (!Array.isArray(csLogs)) csLogs = [];
+
+  // Ids of calls removed on this device. Kept so a deleted call can't come
+  // back from Supabase on the next load, even where the database won't let
+  // the delete itself through.
+  var CS_DELETED_KEY = "signalboard.calls.deleted.v1";
+  var csDeleted = csLoadJson(CS_DELETED_KEY, []);
+  if (!Array.isArray(csDeleted)) csDeleted = [];
 
   var LEAD_BY_ID = {};
   LEADS.forEach(function (l) { LEAD_BY_ID[l.id] = l; });
@@ -2457,6 +2611,7 @@
       var have = {};
       csLogs.forEach(function (g) { have[g.id] = g; });
       rows.forEach(function (row) {
+        if (csDeleted.indexOf(row.id) !== -1) { csDeleteRemote(row.id); return; }
         if (have[row.id]) { have[row.id].synced = true; return; }
         csLogs.push({
           id: row.id, leadId: row.lead_id, line: row.line, manualNumber: row.manual_number,
@@ -2583,6 +2738,7 @@
 
     csCancelAuto();
     csOutcome = null;
+    csTonesSent = "";
     csEl("csOutcomeHint").textContent = "";
     var session = {
       leadId: meta.leadId || null, line: meta.line, number: number, display: meta.display || number,
@@ -2716,7 +2872,9 @@
     var stamp = "[" + csWhen(log.startedAt) + " · call" +
       (log.talkSec ? " " + csDur(log.talkSec) : "") + " · " + def.label +
       (log.callbackAt ? " · call back " + csWhen(log.callbackAt) : "") + "]";
-    e.note = (e.note ? e.note.replace(/\s+$/, "") + "\n" : "") + stamp + (log.note ? " " + log.note : "");
+    var line = stamp + (log.note ? " " + log.note : "");
+    e.note = (e.note ? e.note.replace(/\s+$/, "") + "\n" : "") + line;
+    log.pipeline = { prev: cur, next: next, line: line };
     e.status = next;
     e.updatedAt = Date.now();
     persist(leadId);
@@ -2757,12 +2915,16 @@
     var prevIdx = -1;
     for (var i = 0; i < prevQueue.length; i++) if (prevQueue[i].id === leadId) { prevIdx = i; break; }
 
+    var undo = {
+      log: log, label: def.label, leadId: csLeadId, session: s,
+      note: csEl("csNote").value, callbackVal: csEl("csCallbackAt").value
+    };
     csLogs.unshift(log);
-    csPersistLogs();
     if (!log.demo && log.leadId) csApplyToPipeline(log.leadId, def, log);
+    csPersistLogs();
     if (!log.demo) csPushLog(log);
     if (s) s.saved = true;
-    toast((log.demo ? "Demo call logged: " : "Logged: ") + def.label);
+    csOfferUndo(undo);
 
     csSession = null;
     csOutcome = null;
@@ -2787,6 +2949,189 @@
     csStartAuto(next);
   }
 
+  /* ---------- undo, remove, discard ---------- */
+
+  var csUndoState = null;
+  var csUndoTimer = null;
+
+  function csOfferUndo(state) {
+    csUndoState = state;
+    csEl("csUndoText").textContent = (state.log.demo ? "Demo call logged: " : "Logged: ") + state.label;
+    csEl("csUndo").hidden = false;
+    clearTimeout(csUndoTimer);
+    csUndoTimer = setTimeout(csHideUndo, 10000);
+  }
+
+  function csHideUndo() {
+    clearTimeout(csUndoTimer);
+    csUndoTimer = null;
+    csUndoState = null;
+    csEl("csUndo").hidden = true;
+  }
+
+  function csDeleteRemote(id) {
+    return fetch(SUPABASE_URL + "/rest/v1/call_log?id=eq." + encodeURIComponent(id), {
+      method: "DELETE",
+      headers: supabaseHeaders({ "Prefer": "return=minimal" })
+    }).catch(function () {});
+  }
+
+  // Take back exactly what a logged call did to the lead: its stamped note
+  // line always, and its status — but only if nothing has moved the lead
+  // since (a later call, or a manual change), so a correction never
+  // clobbers newer information.
+  function csRevertPipeline(g) {
+    if (!g.pipeline) return "";
+    var e = entry(g.leadId);
+    var line = g.pipeline.line;
+    if (line && e.note) {
+      var at = e.note.lastIndexOf(line);
+      if (at !== -1) {
+        var before = e.note.slice(0, at).replace(/\n$/, "");
+        var rest = e.note.slice(at + line.length);
+        e.note = before ? before + rest : rest.replace(/^\n/, "");
+      }
+    }
+    var msg = "";
+    if (g.pipeline.prev !== g.pipeline.next) {
+      var later = csLogs.some(function (x) {
+        return !x.demo && x.leadId === g.leadId && x.startedAt > g.startedAt;
+      });
+      if (!later && e.status === g.pipeline.next) {
+        e.status = g.pipeline.prev;
+        msg = " — lead set back to " + statusLabel(e.status);
+      } else {
+        msg = " — lead status left as is, it has changed since";
+      }
+    }
+    e.updatedAt = Date.now();
+    persist(g.leadId);
+    render();
+    return msg;
+  }
+
+  // Returns a note about what was reverted, or null if the call wasn't found.
+  function csRemoveLog(id) {
+    var idx = -1;
+    for (var i = 0; i < csLogs.length; i++) if (csLogs[i].id === id) { idx = i; break; }
+    if (idx === -1) return null;
+    var g = csLogs.splice(idx, 1)[0];
+    csPersistLogs();
+    var msg = "";
+    if (!g.demo) {
+      if (csDeleted.indexOf(g.id) === -1) {
+        csDeleted.push(g.id);
+        if (csDeleted.length > 2000) csDeleted.shift();
+        csSaveJson(CS_DELETED_KEY, csDeleted);
+      }
+      csDeleteRemote(g.id);
+      if (g.leadId) msg = csRevertPipeline(g);
+    }
+    if (csUndoState && csUndoState.log.id === id) csHideUndo();
+    csRenderAll();
+    return msg;
+  }
+
+  function csUndoLastSave() {
+    var st = csUndoState;
+    if (!st) return;
+    csHideUndo();
+    csCancelAuto();
+    if (csSession && !csSession.ended) {
+      var m = csRemoveLog(st.log.id);
+      if (m !== null) toast("Removed the saved call" + m + ". You're on another call, so it wasn't reopened.");
+      return;
+    }
+    if (csSession && csSession.ended && !csSession.saved &&
+        !window.confirm("Undoing reopens the earlier call and discards the unsaved one you have now. Continue?")) return;
+    var msg = csRemoveLog(st.log.id);
+    if (msg === null) return;
+    // Put everything back exactly as it was before Save — real timings, the
+    // chosen outcome, the note — so it can be corrected, not re-typed.
+    csLeadId = st.leadId;
+    csSession = st.session;
+    if (csSession) csSession.saved = false;
+    csOutcome = st.log.outcome;
+    csEl("csNote").value = st.note;
+    csEl("csCallbackAt").value = st.callbackVal;
+    csEl("csOutcomeHint").textContent = "Save undone — change the outcome and save again, or discard the call.";
+    csRenderAll();
+    csRenderCallbackTheirs();
+    toast("Save undone" + msg);
+  }
+
+  function csConfirmRemove(id) {
+    var g = null;
+    for (var i = 0; i < csLogs.length; i++) if (csLogs[i].id === id) { g = csLogs[i]; break; }
+    if (!g) return;
+    var text = g.demo
+      ? "Remove this demo call from the log?"
+      : "Remove this call from the log? Its line in the lead's notes is removed too, and the lead's status is set back if this call changed it.";
+    if (!window.confirm(text)) return;
+    var msg = csRemoveLog(id);
+    if (msg !== null) toast("Call removed" + msg);
+  }
+
+  /* ---------- dial pad ---------- */
+
+  var csTonesSent = "";
+  var csPadHold = null;
+  var csPadSkipClick = false;
+
+  // compose: build a number · tones: live call, keys send DTMF · busy: dialling
+  function csPadMode() {
+    if (csSession && !csSession.ended) return csSession.phase === "live" ? "tones" : "busy";
+    return "compose";
+  }
+
+  function csPadPress(key) {
+    var mode = csPadMode();
+    if (mode === "busy") return;
+    if (mode === "tones") {
+      if (!/^[0-9*#]$/.test(key) || !csCall) return;
+      csCall.sendDigits(key);
+      csTonesSent = (csTonesSent + " " + key).trim().slice(-40);
+      csRenderPad();
+      return;
+    }
+    var input = csEl("csManualNum");
+    if (key === "+" && input.value.replace(/\s/g, "")) return;   // + only at the start
+    input.value += key;
+    csRenderPad();
+  }
+
+  function csPadBackspace() {
+    if (csPadMode() !== "compose") return;
+    var input = csEl("csManualNum");
+    input.value = input.value.replace(/\s+$/, "").slice(0, -1);
+    csRenderPad();
+  }
+
+  function csFlashKey(key) {
+    var b = document.querySelector('#csPadKeys button[data-key="' + (key === "+" ? "0" : key) + '"]');
+    if (!b) return;
+    b.classList.add("is-pressed");
+    setTimeout(function () { b.classList.remove("is-pressed"); }, 140);
+  }
+
+  function csRenderPad() {
+    var mode = csPadMode();
+    var composing = mode === "compose";
+    var value = csEl("csManualNum").value.trim();
+    document.querySelectorAll("#csPadKeys button").forEach(function (b) { b.disabled = mode === "busy"; });
+    csEl("csManualNum").disabled = !composing;
+    csEl("csPadBack").disabled = !composing || !value;
+    csEl("csPadPlus").disabled = !composing;
+    csEl("csPadClear").disabled = !composing || !value;
+    csEl("csManualCall").disabled = !composing || !value;
+    csEl("csPadHint").textContent = mode === "tones"
+      ? "On a call — the keys send tones for phone menus." + (csTonesSent ? " Sent: " + csTonesSent : "")
+      : mode === "busy"
+        ? "The keypad sends tones once the call connects."
+        : "Tap or type a number — one starting with 0 is treated as UK." +
+          (csLeadId ? " It's logged against the open lead." : "");
+  }
+
   /* ---------- selecting a lead ---------- */
 
   function csSelectLead(id, opts) {
@@ -2800,7 +3145,21 @@
     csEl("csCallbackAt").value = "";
     csEl("csOutcomeHint").textContent = "";
     csLeadId = id;
+    // A lead picked by "Save & next" can sit past what's loaded — load up to it.
+    for (var i = 0; i < csQueueCache.length; i++) {
+      if (csQueueCache[i].id === id) {
+        if (i >= csQueueShown) csQueueShown = i + 50;
+        break;
+      }
+    }
     csRenderAll();
+    // Bring it into view inside the queue list only — never scroll the page.
+    var li = document.querySelector('#csQueueList .cs-q-item[aria-current="true"]');
+    if (li) {
+      var box = csEl("csQueueList").getBoundingClientRect(), r = li.getBoundingClientRect();
+      if (r.top < box.top) csEl("csQueueList").scrollTop -= box.top - r.top;
+      else if (r.bottom > box.bottom) csEl("csQueueList").scrollTop += r.bottom - box.bottom;
+    }
     return true;
   }
 
@@ -2896,15 +3255,24 @@
     return { list: list, byLead: byLead };
   }
 
-  function csRenderQueue() {
+  // The queue loads in steps as you scroll: all ~1,100 UK leads are
+  // reachable, without building 16,000 rows when "All countries" is picked.
+  var CS_QUEUE_STEP = 200;
+  var csQueueShown = CS_QUEUE_STEP;
+
+  function csRenderQueue(resetScroll) {
+    var listEl = csEl("csQueueList");
+    // innerHTML resets scrollTop — without keeping it, picking a lead
+    // threw you back to the top of the queue every time.
+    var keep = resetScroll === true ? 0 : listEl.scrollTop;
     var r = csQueue();
     csQueueCache = r.list;
-    var shown = r.list.slice(0, CS_QUEUE_CAP);
+    var total = r.list.length;
+    var shown = r.list.slice(0, csQueueShown);
     var now = Date.now();
-    csEl("csQueueCount").textContent = r.list.length > CS_QUEUE_CAP
-      ? "top " + CS_QUEUE_CAP + " of " + r.list.length.toLocaleString()
-      : r.list.length.toLocaleString() + (r.list.length === 1 ? " lead" : " leads");
-    csEl("csQueueList").innerHTML = shown.map(function (l) {
+    csEl("csQueueCount").textContent = total.toLocaleString() + (total === 1 ? " lead" : " leads") +
+      (shown.length < total ? " · " + shown.length.toLocaleString() + " loaded" : "");
+    listEl.innerHTML = shown.map(function (l) {
       var hist = r.byLead[l.id] || [];
       var cb = csPendingCallback(hist);
       var tag = cb
@@ -2916,8 +3284,14 @@
         '<span class="cs-q-sub">' + esc(l.city) + " · " + esc(l.vertical) + "</span>" +
         '<span class="cs-q-tags">' + tag + "</span>" +
         "</li>";
-    }).join("");
-    csEl("csQueueEmpty").hidden = r.list.length > 0;
+    }).join("") + (shown.length < total ? '<li class="cs-q-more" aria-hidden="true">Scroll for more…</li>' : "");
+    listEl.scrollTop = keep;
+    csEl("csQueueEmpty").hidden = total > 0;
+  }
+
+  function csResetQueue() {
+    csQueueShown = CS_QUEUE_STEP;
+    csRenderQueue(true);
   }
 
   function csScriptFor(lead) {
@@ -2995,9 +3369,11 @@
 
     var hist = csLogsByLead()[lead.id] || [];
     csEl("csLeadHistory").innerHTML = hist.length ? hist.slice(0, 8).map(function (g) {
-      return "<li><span class=\"num\">" + esc(csWhen(g.startedAt)) + "</span>" + csOutcomeChip(g.outcome) +
+      return "<li><div><span class=\"num\">" + esc(csWhen(g.startedAt)) + "</span>" + csOutcomeChip(g.outcome) +
         (g.talkSec ? ' <span class="cell-sub">' + csDur(g.talkSec) + " talk</span>" : "") +
-        (g.note ? '<div class="cell-sub">' + esc(g.note) + "</div>" : "") + "</li>";
+        (g.note ? '<div class="cell-sub">' + esc(g.note) + "</div>" : "") + "</div>" +
+        '<button type="button" class="cs-del" data-del="' + esc(g.id) + '" aria-label="Remove this call" title="Remove this call">&times;</button>' +
+        "</li>";
     }).join("") : '<li class="cell-sub">No calls to this lead yet.</li>';
   }
 
@@ -3013,6 +3389,7 @@
     var canSave = !!def && !!target && !live;
     csEl("csSave").disabled = !canSave;
     csEl("csSaveNext").disabled = !canSave;
+    csEl("csDiscard").hidden = !(csSession && csSession.ended && !csSession.saved);
   }
 
   function csRenderCallUi() {
@@ -3026,16 +3403,11 @@
     }[phase];
     csEl("csCallNumber").textContent = s ? s.display : "";
     csEl("csMute").disabled = !(live && s.phase === "live");
-    csEl("csKeypadBtn").disabled = !(live && s.phase === "live");
     csEl("csHangup").disabled = !live;
     csEl("csMute").setAttribute("aria-pressed", String(!!(s && s.muted)));
     csEl("csMute").textContent = s && s.muted ? "Unmute" : "Mute";
-    if (!(live && s.phase === "live")) {
-      csEl("csKeypad").hidden = true;
-      csEl("csKeypadBtn").setAttribute("aria-expanded", "false");
-    }
-    csEl("csManualCall").disabled = live;
     document.querySelectorAll("#csLines button").forEach(function (b) { b.disabled = live; });
+    csRenderPad();
     csTick();
   }
 
@@ -3056,6 +3428,7 @@
           (g.callbackAt ? '<div class="cell-sub">back ' + esc(csWhen(g.callbackAt)) + "</div>" : "") + "</td>" +
         '<td class="cs-log-note">' + esc(g.note || "") + "</td>" +
         "<td>" + esc(g.caller || "") + "</td>" +
+        '<td><button type="button" class="cs-del" data-del="' + esc(g.id) + '" aria-label="Remove this call" title="Remove this call">&times;</button></td>' +
         "</tr>";
     }).join("");
     csEl("csLogEmpty").hidden = rows.length > 0;
@@ -3200,14 +3573,19 @@
   var csQDebounce = null;
   csEl("csQ").addEventListener("input", function () {
     clearTimeout(csQDebounce);
-    csQDebounce = setTimeout(csRenderQueue, 180);
+    csQDebounce = setTimeout(csResetQueue, 180);
   });
   ["csCountry", "csVertical", "csBand", "csShow"].forEach(function (id) {
-    csEl(id).addEventListener("change", function () {
-      csRenderQueue();
-      csEl("csQueueList").scrollTop = 0;
-    });
+    csEl(id).addEventListener("change", csResetQueue);
   });
+
+  csEl("csQueueList").addEventListener("scroll", function () {
+    var el = csEl("csQueueList");
+    if (csQueueShown >= csQueueCache.length) return;
+    if (el.scrollTop + el.clientHeight < el.scrollHeight - 400) return;
+    csQueueShown += CS_QUEUE_STEP;
+    csRenderQueue();
+  }, { passive: true });
 
   function csPickFromQueue(ev) {
     var li = ev.target.closest(".cs-q-item");
@@ -3235,34 +3613,58 @@
     csRenderCallUi();
   });
 
-  csEl("csKeypadBtn").addEventListener("click", function () {
-    var pad = csEl("csKeypad");
-    pad.hidden = !pad.hidden;
-    csEl("csKeypadBtn").setAttribute("aria-expanded", String(!pad.hidden));
+  csEl("csPadKeys").addEventListener("pointerdown", function (ev) {
+    csPadSkipClick = false;
+    if (!ev.target.closest('button[data-key="0"]') || csPadMode() !== "compose") return;
+    // Hold 0 for "+", like a phone.
+    csPadHold = setTimeout(function () {
+      csPadHold = null;
+      csPadSkipClick = true;
+      csPadPress("+");
+      csFlashKey("+");
+    }, 550);
+  });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(function (type) {
+    csEl("csPadKeys").addEventListener(type, function () {
+      if (csPadHold) { clearTimeout(csPadHold); csPadHold = null; }
+    });
+  });
+  csEl("csPadKeys").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-key]");
+    if (!b) return;
+    if (csPadSkipClick) { csPadSkipClick = false; return; }
+    csPadPress(b.dataset.key);
+  });
+  csEl("csPadPlus").addEventListener("click", function () { csPadPress("+"); });
+  csEl("csPadBack").addEventListener("click", csPadBackspace);
+  csEl("csPadClear").addEventListener("click", function () {
+    csEl("csManualNum").value = "";
+    csRenderPad();
   });
 
-  function csSendDigit(d) {
-    if (!csCall || !csSession || csSession.phase !== "live") return;
-    csCall.sendDigits(d);
-    toast("Sent " + d);
-  }
-  csEl("csKeypad").addEventListener("click", function (ev) {
-    var b = ev.target.closest("button[data-digit]");
-    if (b) csSendDigit(b.dataset.digit);
-  });
+  // Typing digits anywhere on the Call tab (outside a text field) uses the pad.
   document.addEventListener("keydown", function (ev) {
-    if (csEl("csKeypad").hidden || !/^[0-9*#]$/.test(ev.key)) return;
-    var tag = (ev.target && ev.target.tagName) || "";
-    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-    csSendDigit(ev.key);
+    if (csEl("viewCalls").hidden || csEl("csSettings").open) return;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var t = ev.target;
+    var tag = (t && t.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (t && t.isContentEditable)) return;
+    if (/^[0-9*#+]$/.test(ev.key)) {
+      ev.preventDefault();
+      csPadPress(ev.key);
+      csFlashKey(ev.key);
+    } else if (ev.key === "Backspace" && csPadMode() === "compose" && csEl("csManualNum").value) {
+      ev.preventDefault();
+      csPadBackspace();
+    }
   });
 
   csEl("csManualCall").addEventListener("click", function () {
-    var raw = csEl("csManualNum").value;
-    var n = csE164(raw);
-    if (!n) { toast("Enter the number in international format, e.g. +44 20 7946 0000"); return; }
+    var n = csE164(csEl("csManualNum").value);
+    if (!n) { toast("Enter a full number — e.g. +44 20 7946 0000 or 020 7946 0000"); return; }
     csStartCall(n, { leadId: csLeadId, line: "manual", display: n });
   });
+  csEl("csManualNum").addEventListener("input", csRenderPad);
   csEl("csManualNum").addEventListener("keydown", function (ev) {
     if (ev.key === "Enter") { ev.preventDefault(); csEl("csManualCall").click(); }
   });
@@ -3283,6 +3685,23 @@
   csEl("csCallbackAt").addEventListener("input", csRenderCallbackTheirs);
   csEl("csSave").addEventListener("click", function () { csSaveOutcome(false); });
   csEl("csSaveNext").addEventListener("click", function () { csSaveOutcome(true); });
+  csEl("csUndoBtn").addEventListener("click", csUndoLastSave);
+  csEl("csDiscard").addEventListener("click", function () {
+    if (!csSession || !csSession.ended || csSession.saved) return;
+    var billed = !csSession.demo && csSession.acceptedAt;
+    if (!window.confirm("Discard this call without logging it?" +
+        (billed ? " Twilio still bills the time it was connected." : ""))) return;
+    csSession = null;
+    csOutcome = null;
+    csEl("csNote").value = "";
+    csEl("csCallbackAt").value = "";
+    csEl("csOutcomeHint").textContent = "Call discarded — nothing was logged.";
+    csRenderAll();
+  });
+  csEl("csLeadHistory").addEventListener("click", function (ev) {
+    var del = ev.target.closest("button[data-del]");
+    if (del) csConfirmRemove(del.dataset.del);
+  });
   csEl("csAutoCancel").addEventListener("click", csCancelAuto);
   csEl("csAutoDial").addEventListener("change", function (ev) {
     csSettings.autoDial = ev.target.checked;
@@ -3296,6 +3715,8 @@
   });
 
   csEl("csLogRows").addEventListener("click", function (ev) {
+    var del = ev.target.closest("button[data-del]");
+    if (del) { csConfirmRemove(del.dataset.del); return; }
     var tr = ev.target.closest("tr[data-id]");
     if (tr && tr.dataset.id && csSelectLead(tr.dataset.id)) {
       document.querySelector(".cs-grid").scrollIntoView({ behavior: "smooth", block: "start" });

@@ -30,8 +30,9 @@ create index if not exists call_log_lead_id on call_log (lead_id);
 
 alter table call_log enable row level security;
 
--- Append-only from the dashboard: read and insert, deliberately no update
--- or delete policy, so a call record can't be rewritten after the fact.
+-- Read, insert and delete — deliberately no update policy, so a call record
+-- can't be quietly rewritten after the fact. Delete exists so a call logged
+-- by mistake can be removed from the dashboard (Undo / the × on a row).
 create policy "anon can read call_log"
   on call_log for select
   using (true);
@@ -39,3 +40,7 @@ create policy "anon can read call_log"
 create policy "anon can insert call_log"
   on call_log for insert
   with check (true);
+
+create policy "anon can delete call_log"
+  on call_log for delete
+  using (true);
