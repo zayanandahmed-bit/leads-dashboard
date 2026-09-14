@@ -833,6 +833,51 @@
   .cs-filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .cs-filter-row select { width: 100%; min-width: 0; }
 
+  .cs-filter-row button { width: 100%; min-width: 0; }
+  .cs-filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  /* Half-width selects in a ~300px panel: smaller text so labels aren't cut off. */
+  .cs-filter-grid select,
+  .cs-filter-row select { width: 100%; min-width: 0; font-size: 12px; padding: 6px 8px; }
+
+  .cs-more-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    background: var(--surface-sunk);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+
+  .cs-more-filters .cs-toggle { font-size: 12.5px; }
+  #csFiltersToggle { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  #csFiltersToggle[aria-expanded="true"] { border-color: var(--accent); color: var(--accent-ink); }
+
+  .cs-filter-count {
+    min-width: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--accent);
+    color: var(--surface);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 18px;
+  }
+
+  .cs-link {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent-ink);
+    font-size: 12.5px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .cs-link:hover,
+  .cs-link:disabled,
+  .cs-link:disabled:hover { background: none; border: 0; }
+
   .cs-queue-list {
     list-style: none;
     margin: 0;
@@ -1284,23 +1329,76 @@
           <span class="cs-count num" id="csQueueCount"></span>
         </div>
         <div class="cs-filters">
-          <input type="search" id="csQ" autocomplete="off" placeholder="Search business or city&hellip;" aria-label="Search the queue">
+          <input type="search" id="csQ" autocomplete="off" placeholder="Search name, address, postcode or email&hellip;" aria-label="Search the queue">
           <div class="cs-filter-row">
             <select id="csCountry" autocomplete="off" aria-label="Country"></select>
-            <select id="csVertical" autocomplete="off" aria-label="Sector"></select>
-          </div>
-          <div class="cs-filter-row">
-            <select id="csBand" autocomplete="off" aria-label="Priority">
-              <option value="">All priorities</option>
-              <option value="prime">Prime</option>
-              <option value="strong">Strong</option>
-              <option value="watch">Watch</option>
-            </select>
             <select id="csShow" autocomplete="off" aria-label="Which leads to show">
               <option value="fresh">Not called yet</option>
               <option value="callback">Callbacks due</option>
               <option value="all">Everyone</option>
             </select>
+          </div>
+          <div class="cs-filter-row">
+            <select id="csSort" autocomplete="off" aria-label="Sort the queue">
+              <option value="score">Best signal</option>
+              <option value="reviews">Most reviews</option>
+              <option value="rating">Highest rated</option>
+              <option value="closes">Open latest</option>
+              <option value="name">Name A&ndash;Z</option>
+            </select>
+            <button type="button" id="csFiltersToggle" aria-expanded="false" aria-controls="csMoreFilters">More filters <span class="cs-filter-count" id="csFilterCount" hidden></span></button>
+          </div>
+          <div class="cs-more-filters" id="csMoreFilters" hidden>
+            <div class="cs-filter-grid">
+              <select id="csState" autocomplete="off" aria-label="State"></select>
+              <select id="csCity" autocomplete="off" aria-label="City"></select>
+              <select id="csVertical" autocomplete="off" aria-label="Sector"></select>
+              <select id="csBand" autocomplete="off" aria-label="Priority">
+                <option value="">All priorities</option>
+                <option value="prime">Prime</option>
+                <option value="strong">Strong</option>
+                <option value="watch">Watch</option>
+              </select>
+              <select id="csStatus" autocomplete="off" aria-label="Pipeline status">
+                <option value="">Any status</option>
+                <option value="new">Not contacted</option>
+                <option value="contacted">Contacted</option>
+                <option value="replied">Replied</option>
+                <option value="won">Won</option>
+                <option value="lost">Lost</option>
+              </select>
+              <select id="csWa" autocomplete="off" aria-label="WhatsApp">
+                <option value="">Any WhatsApp</option>
+                <option value="yes">WhatsApp reachable</option>
+                <option value="verified">WhatsApp verified</option>
+                <option value="no">No WhatsApp</option>
+              </select>
+              <select id="csEmail" autocomplete="off" aria-label="Email">
+                <option value="">Any email</option>
+                <option value="yes">Has email</option>
+                <option value="no">No email</option>
+              </select>
+              <select id="csLineType" autocomplete="off" aria-label="Number type">
+                <option value="">Any line type</option>
+                <option value="landline">Landline only</option>
+                <option value="mobile">Has a mobile</option>
+              </select>
+              <select id="csRating" autocomplete="off" aria-label="Minimum rating">
+                <option value="">Any rating</option>
+                <option value="4.5">4.5&#9733; and up</option>
+                <option value="4">4&#9733; and up</option>
+              </select>
+              <select id="csReviews" autocomplete="off" aria-label="Minimum reviews">
+                <option value="">Any reviews</option>
+                <option value="50">50+ reviews</option>
+                <option value="200">200+ reviews</option>
+                <option value="500">500+ reviews</option>
+              </select>
+            </div>
+            <label class="cs-toggle"><input type="checkbox" id="csOpenNow"> In business hours right now (their time)</label>
+            <label class="cs-toggle"><input type="checkbox" id="csLate"> Open past 7pm</label>
+            <p class="cs-hint">Landline vs mobile is read from the number, so it works for UK and UAE leads &mdash; US numbers don't show it.</p>
+            <button type="button" class="cs-link" id="csFiltersClear">Clear search and filters</button>
           </div>
         </div>
         <ol class="cs-queue-list" id="csQueueList"></ol>
@@ -3218,27 +3316,77 @@
     }).join("");
   }
 
+  // Filters that live behind "More filters" — counted on its badge and reset
+  // by "Clear". Country, Show and Sort stay visible, so they aren't counted.
+  var CS_MORE_FILTERS = ["csState", "csCity", "csVertical", "csBand", "csStatus", "csWa",
+                         "csEmail", "csLineType", "csRating", "csReviews"];
+  var CS_MORE_TOGGLES = ["csOpenNow", "csLate"];
+
+  // Line type read from the number itself, where the country encodes it:
+  // UK mobiles are 07…, UAE mobiles 05…. US numbers don't, so "unknown".
+  function csNumberKind(number) {
+    if (!number) return "unknown";
+    if (number.indexOf("+44") === 0) {
+      if (/^\+447[1-9]/.test(number)) return "mobile";
+      if (/^\+44[123]/.test(number)) return "landline";
+      return "other";   // freephone and other non-geographic ranges
+    }
+    if (number.indexOf("+971") === 0) return /^\+9715/.test(number) ? "mobile" : "landline";
+    return "unknown";
+  }
+
   function csQueue() {
-    var country = csEl("csCountry").value;
-    var vertical = csEl("csVertical").value;
-    var band = csEl("csBand").value;
-    var show = csEl("csShow").value;
+    var v = function (id) { return csEl(id).value; };
+    var country = v("csCountry"), state = v("csState"), city = v("csCity");
+    var vertical = v("csVertical"), band = v("csBand"), status = v("csStatus");
+    var wa = v("csWa"), email = v("csEmail"), lineType = v("csLineType");
+    var show = v("csShow"), sort = v("csSort");
+    var minRating = parseFloat(v("csRating")) || 0;
+    var minReviews = parseInt(v("csReviews"), 10) || 0;
+    var openNow = csEl("csOpenNow").checked;
+    var late = csEl("csLate").checked;
     var q = csEl("csQ").value.trim().toLowerCase();
     var byLead = csLogsByLead();
     var dnc = csDncSet();
     var eod = csEndOfToday();
+    var openByTz = {};   // a handful of time zones — work each out once, not per lead
 
     var list = LEADS.filter(function (l) {
       if (dnc[l.id]) return false;
       if (country && l.country !== country) return false;
+      if (state && l.state !== state) return false;
+      if (city && l.city !== city) return false;
       if (vertical && l.vertical !== vertical) return false;
       if (band && l.band !== band) return false;
-      if (q && (l.name + " " + l.city + " " + (l.type || "")).toLowerCase().indexOf(q) === -1) return false;
-      if (!csLinesFor(l).length) return false;
+      if (status && statusOf(l.id) !== status) return false;
+      if (wa === "yes" && !isLive(l)) return false;
+      if (wa === "verified" && l.waSrc !== "verified" && l.waSrc !== "confirmed-wa.me") return false;
+      if (wa === "no" && isLive(l)) return false;
+      if (email === "yes" && !l.email) return false;
+      if (email === "no" && l.email) return false;
+      if (minRating && !(l.rating >= minRating)) return false;
+      if (minReviews && l.reviews < minReviews) return false;
+      if (late && !(l.closes !== null && l.closes >= 19)) return false;
+      if (q && (l.name + " " + l.address + " " + (l.type || "") + " " + (l.email || "")).toLowerCase().indexOf(q) === -1) return false;
+
+      var lines = csLinesFor(l);
+      if (!lines.length) return false;
+      if (lineType === "mobile" && !lines.some(function (ln) { return csNumberKind(ln.number) === "mobile"; })) return false;
+      if (lineType === "landline" && !lines.every(function (ln) { return csNumberKind(ln.number) === "landline"; })) return false;
+
+      if (openNow) {
+        var tz = csTzFor(l);
+        if (!tz) return false;
+        if (!(tz in openByTz)) openByTz[tz] = csBusinessHours(tz).open;
+        if (!openByTz[tz]) return false;
+      }
+
       var hist = byLead[l.id];
       if (show === "fresh") {
+        // Won/lost leads normally drop out of "not called yet" — unless you
+        // asked for that status on purpose.
         var st = statusOf(l.id);
-        return !hist && st !== "won" && st !== "lost";
+        return !hist && (status || (st !== "won" && st !== "lost"));
       }
       if (show === "callback") {
         var cb = csPendingCallback(hist);
@@ -3247,12 +3395,58 @@
       return true;
     });
 
+    var sorts = {
+      score: function (a, b) { return (b.score - a.score) || (b.reviews - a.reviews); },
+      reviews: function (a, b) { return (b.reviews - a.reviews) || (b.score - a.score); },
+      rating: function (a, b) { return ((b.rating || 0) - (a.rating || 0)) || (b.reviews - a.reviews); },
+      closes: function (a, b) {
+        return ((b.closes === null ? -1 : b.closes) - (a.closes === null ? -1 : a.closes)) || (b.score - a.score);
+      },
+      name: function (a, b) { return a.name.localeCompare(b.name); }
+    };
     if (show === "callback") {
       list.sort(function (a, b) { return csPendingCallback(byLead[a.id]) - csPendingCallback(byLead[b.id]); });
     } else {
-      list.sort(function (a, b) { return (b.score - a.score) || (b.reviews - a.reviews); });
+      list.sort(sorts[sort] || sorts.score);
     }
     return { list: list, byLead: byLead };
+  }
+
+  function csRefreshQueuePlaces() {
+    var country = csEl("csCountry").value;
+    var scoped = country ? LEADS.filter(function (l) { return l.country === country; }) : LEADS;
+    var qState = csEl("csState"), qCity = csEl("csCity");
+    var states = Array.from(new Set(scoped.map(function (l) { return l.state; }).filter(Boolean))).sort();
+    var curState = qState.value;
+    fillSelect("csState", states, "All states");
+    qState.value = states.indexOf(curState) !== -1 ? curState : "";
+    qState.hidden = states.length === 0;
+    if (qState.value) scoped = scoped.filter(function (l) { return l.state === qState.value; });
+    var cities = Array.from(new Set(scoped.map(function (l) { return l.city; }))).sort();
+    var curCity = qCity.value;
+    fillSelect("csCity", cities, "All cities");
+    qCity.value = cities.indexOf(curCity) !== -1 ? curCity : "";
+  }
+
+  function csActiveFilterCount() {
+    return CS_MORE_FILTERS.filter(function (id) { return csEl(id).value !== ""; }).length +
+      CS_MORE_TOGGLES.filter(function (id) { return csEl(id).checked; }).length;
+  }
+
+  function csRenderFilterMeta() {
+    var n = csActiveFilterCount();
+    var badge = csEl("csFilterCount");
+    badge.hidden = !n;
+    badge.textContent = n;
+    var searching = !!csEl("csQ").value.trim();
+    csEl("csFiltersClear").disabled = !n && !searching;
+    var show = csEl("csShow").value;
+    csEl("csSort").disabled = show === "callback";   // callbacks are always soonest-due first
+    csEl("csQueueEmpty").textContent = n || searching
+      ? "No leads match these filters."
+      : show === "fresh" ? "Everyone here has been called — switch to Everyone or Callbacks due."
+      : show === "callback" ? "No callbacks due today."
+      : "Nobody left in this queue.";
   }
 
   // The queue loads in steps as you scroll: all ~1,100 UK leads are
@@ -3287,6 +3481,7 @@
     }).join("") + (shown.length < total ? '<li class="cs-q-more" aria-hidden="true">Scroll for more…</li>' : "");
     listEl.scrollTop = keep;
     csEl("csQueueEmpty").hidden = total > 0;
+    csRenderFilterMeta();
   }
 
   function csResetQueue() {
@@ -3549,6 +3744,11 @@
     }).join("");
     if (countries.indexOf("UK") !== -1) countrySelect.value = "UK";   // calling market is the UK
     fillSelect("csVertical", verticals, "All sectors");
+    csRefreshQueuePlaces();
+    if (csLoadJson("signalboard.calls.filtersOpen", false)) {
+      csEl("csMoreFilters").hidden = false;
+      csEl("csFiltersToggle").setAttribute("aria-expanded", "true");
+    }
     csEl("csAutoDial").checked = !!csSettings.autoDial;
     csLoadRemoteLogs();
     setInterval(function () {
@@ -3575,8 +3775,27 @@
     clearTimeout(csQDebounce);
     csQDebounce = setTimeout(csResetQueue, 180);
   });
-  ["csCountry", "csVertical", "csBand", "csShow"].forEach(function (id) {
+  // Registered first, so the state/city lists are already narrowed when
+  // the queue re-filters on the same change.
+  csEl("csCountry").addEventListener("change", csRefreshQueuePlaces);
+  csEl("csState").addEventListener("change", csRefreshQueuePlaces);
+  ["csCountry", "csShow", "csSort"].concat(CS_MORE_FILTERS, CS_MORE_TOGGLES).forEach(function (id) {
     csEl(id).addEventListener("change", csResetQueue);
+  });
+
+  csEl("csFiltersToggle").addEventListener("click", function () {
+    var panel = csEl("csMoreFilters");
+    panel.hidden = !panel.hidden;
+    csEl("csFiltersToggle").setAttribute("aria-expanded", String(!panel.hidden));
+    csSaveJson("signalboard.calls.filtersOpen", !panel.hidden);
+  });
+
+  csEl("csFiltersClear").addEventListener("click", function () {
+    CS_MORE_FILTERS.forEach(function (id) { csEl(id).value = ""; });
+    CS_MORE_TOGGLES.forEach(function (id) { csEl(id).checked = false; });
+    csEl("csQ").value = "";
+    csRefreshQueuePlaces();
+    csResetQueue();
   });
 
   csEl("csQueueList").addEventListener("scroll", function () {
