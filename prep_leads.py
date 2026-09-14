@@ -467,7 +467,7 @@ def main(paths, out_path, enrich_path="whatsapp.json", country_key="uk"):
 
     # A number Evolution rejected is not reachable, whatever the website said.
     reachable = sum(1 for l in leads if l["wa"] and l["waSrc"] != "not-registered")
-    confirmed = sum(1 for l in leads if l["waSrc"] == "verified")
+    confirmed = sum(1 for l in leads if l["waSrc"] in ("verified", "confirmed-wa.me"))
     dead = sum(1 for l in leads if l["waSrc"] == "not-registered")
     print(f"  WhatsApp-reachable: {reachable} / {len(leads)}"
           f"  (verified {confirmed}, unchecked {reachable - confirmed}, ruled out {dead})")

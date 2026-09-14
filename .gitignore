@@ -23,5 +23,6 @@ test_london_dentists.csv
 # same reasoning: regenerable, and no need to version raw per-search rows.
 raw_usa/
 raw_usa_run.log
+wa_redirect_run.log
 *.bak
 
