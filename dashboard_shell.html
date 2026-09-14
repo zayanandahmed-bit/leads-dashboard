@@ -662,6 +662,381 @@
     * { transition: none !important; animation: none !important; }
   }
 
+
+  /* ---------- hidden really means hidden ---------- */
+
+  /* Several elements here set their own display (flex/grid), which beats the
+     browser's default for [hidden] — so toggling .hidden silently did
+     nothing (the pager stayed visible on one-page results). */
+  [hidden] { display: none !important; }
+
+  /* ---------- section tabs ---------- */
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--line-strong);
+    margin-top: -6px;
+  }
+
+  .tabs [role="tab"] {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    margin-bottom: -1px;
+    padding: 9px 14px 10px;
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .tabs [role="tab"]:hover { background: none; color: var(--ink); }
+  .tabs [role="tab"][aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+  .view { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+  /* ---------- call system ---------- */
+
+  #viewCalls input[type="tel"],
+  .cs-dialog input[type="url"],
+  .cs-dialog input[type="password"],
+  .cs-dialog input[type="text"],
+  #viewCalls input[type="datetime-local"] {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--surface-sunk);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    padding: 7px 10px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  #viewCalls input:focus-visible,
+  .cs-dialog input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+  }
+
+  button:disabled,
+  button:disabled:hover {
+    opacity: .45;
+    cursor: default;
+    background: var(--surface);
+    border-color: var(--line-strong);
+  }
+
+  .btn-primary:disabled,
+  .btn-primary:disabled:hover { background: var(--accent); border-color: var(--accent); }
+
+  .btn-danger { background: var(--st-lost); border-color: var(--st-lost); color: #FFFFFF; font-weight: 500; }
+  .btn-danger:hover { background: var(--st-lost); border-color: var(--st-lost); filter: brightness(.9); }
+  .btn-danger:disabled,
+  .btn-danger:disabled:hover { background: var(--st-lost); border-color: var(--st-lost); filter: none; }
+
+  .cs-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+    background: var(--ink-muted);
+  }
+
+  .cs-dot[data-state="ready"]      { background: var(--st-won); }
+  .cs-dot[data-state="demo"]       { background: var(--strong); }
+  .cs-dot[data-state="error"]      { background: var(--st-lost); }
+  .cs-dot[data-state="connecting"],
+  .cs-dot[data-state="busy"]       { background: var(--st-contacted); animation: cs-pulse 1.1s ease-in-out infinite; }
+
+  .tabs .cs-dot { width: 8px; height: 8px; }
+
+  @keyframes cs-pulse { 50% { opacity: .3; } }
+
+  .cs-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+  }
+
+  .cs-status { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .cs-status-title { font-weight: 600; }
+  .cs-status-sub { font-size: 12.5px; color: var(--ink-muted); overflow-wrap: anywhere; }
+  .cs-bar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .cs-clock { font-size: 12px; color: var(--ink-muted); margin-right: 6px; white-space: nowrap; }
+
+  .cs-grid {
+    display: grid;
+    grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) minmax(260px, 320px);
+    gap: 16px;
+    align-items: start;
+  }
+
+  .cs-panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .cs-panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .cs-panel h2 {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .cs-count { font-size: 12px; color: var(--ink-muted); }
+  .cs-hint { font-size: 12px; color: var(--ink-muted); margin: 0; line-height: 1.5; }
+  .cs-error { font-size: 12.5px; color: var(--st-lost); margin: 0; min-height: 1em; }
+
+  .cs-filters { display: flex; flex-direction: column; gap: 6px; }
+  .cs-filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .cs-filter-row select { width: 100%; min-width: 0; }
+
+  .cs-queue-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 620px;
+    overflow-y: auto;
+    border-top: 1px solid var(--line);
+  }
+
+  .cs-q-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 10px;
+    padding: 9px 8px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+  }
+
+  .cs-q-item:hover { background: var(--surface-sunk); }
+  .cs-q-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .cs-q-item[aria-current="true"] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+
+  .cs-q-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cs-q-score { font-family: var(--font-mono); font-size: 12px; font-weight: 600; text-align: right; }
+  .cs-q-sub { font-size: 12px; color: var(--ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cs-q-tags { text-align: right; }
+
+  .cs-chip {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 2px;
+    background: var(--watch-soft);
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+
+  .cs-chip[data-tone="good"] { background: var(--accent-soft); color: var(--accent-ink); }
+  .cs-chip[data-tone="warn"] { background: var(--strong-soft); color: var(--strong); }
+  .cs-chip[data-tone="bad"]  { background: var(--prime-soft); color: var(--prime); }
+
+  .cs-lead-empty {
+    padding: 28px 12px;
+    text-align: center;
+    color: var(--ink-muted);
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius);
+  }
+
+  .cs-lead { display: flex; flex-direction: column; gap: 12px; }
+  .cs-lead-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .cs-lead-title { min-width: 0; }
+  .cs-lead-title .eyebrow { margin-bottom: 4px; }
+
+  .cs-lead-title h2 {
+    font-family: var(--font-display);
+    font-size: clamp(20px, 2.4vw, 26px);
+    font-weight: 700;
+    line-height: 1.1;
+    margin: 0 0 4px;
+    overflow-wrap: anywhere;
+  }
+
+  .cs-lines { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .cs-line-btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    padding: 8px 16px;
+    text-align: left;
+  }
+
+  .cs-line-btn strong { font-weight: 600; font-size: 13.5px; }
+  .cs-line-btn small { font-family: var(--font-mono); font-size: 12px; opacity: .9; }
+
+  .cs-hours { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  .cs-auto {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    background: var(--strong-soft);
+    color: var(--strong);
+    font-weight: 500;
+  }
+
+  .cs-call {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 18px 14px;
+    background: var(--surface-sunk);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    text-align: center;
+  }
+
+  .cs-call-state {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .cs-call[data-phase="connecting"] .cs-call-state,
+  .cs-call[data-phase="ringing"] .cs-call-state { color: var(--st-contacted); }
+  .cs-call[data-phase="live"] .cs-call-state { color: var(--st-won); }
+  .cs-call[data-phase="live"] { border-color: var(--st-won); }
+
+  .cs-timer { font-size: 42px; font-weight: 500; line-height: 1; letter-spacing: -.02em; }
+  .cs-call-number { font-size: 13px; color: var(--ink-soft); min-height: 1.4em; }
+  .cs-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .cs-controls button { min-width: 88px; }
+  #csMute[aria-pressed="true"] { background: var(--strong-soft); border-color: var(--strong); color: var(--strong); }
+
+  .cs-keypad { display: grid; grid-template-columns: repeat(3, 58px); gap: 6px; margin-top: 4px; }
+  .cs-keypad button { font-family: var(--font-mono); font-size: 18px; padding: 8px 0; }
+
+  .cs-manual summary { cursor: pointer; font-size: 13px; color: var(--ink-soft); }
+  .cs-manual[open] summary { margin-bottom: 8px; }
+  .cs-manual-row { display: flex; gap: 8px; margin-bottom: 6px; }
+  .cs-manual-row button { flex: none; }
+
+  .cs-script { font-size: 13.5px; line-height: 1.55; border-top: 1px solid var(--line); padding-top: 12px; }
+
+  .cs-script h3 {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 12px 0 3px;
+  }
+
+  .cs-script h3:first-child { margin-top: 0; }
+  .cs-script p { margin: 0; color: var(--ink); }
+  .cs-objections { margin: 0; }
+  .cs-objections dt { font-weight: 600; margin-top: 6px; }
+  .cs-objections dd { margin: 1px 0 0; color: var(--ink-soft); }
+
+  .cs-outcomes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .cs-outcomes button { text-align: left; padding: 8px 10px; }
+  .cs-outcomes button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #FFFFFF; }
+  .cs-outcomes button[data-tone="bad"][aria-pressed="true"] { background: var(--st-lost); border-color: var(--st-lost); }
+
+  .cs-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-muted); }
+  .cs-field textarea { min-height: 96px; }
+  .cs-pass-row { display: flex; gap: 6px; }
+  .cs-pass-row button { flex: none; }
+
+  .cs-save-row { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; }
+  .cs-save-row button { padding: 9px 12px; }
+
+  .cs-toggle { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--ink-soft); cursor: pointer; }
+  .cs-toggle input { margin-top: 3px; accent-color: var(--accent); }
+  .cs-toggle-strong { font-weight: 500; color: var(--ink); }
+
+  .cs-history ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .cs-history li { font-size: 12.5px; }
+  .cs-history .num { color: var(--ink-muted); margin-right: 4px; }
+
+  .cs-log-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .cs-log .table-scroll { border-top: 1px solid var(--line); }
+  .cs-log-table { min-width: 820px; }
+  .cs-log-table tbody tr { cursor: pointer; }
+  .cs-log-note { max-width: 280px; color: var(--ink-soft); font-size: 12.5px; }
+
+  .cs-dialog {
+    width: min(540px, 94vw);
+    max-height: 90vh;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--shadow);
+  }
+
+  .cs-dialog::backdrop { background: rgba(8, 14, 15, .5); }
+  .cs-dialog form { display: flex; flex-direction: column; max-height: 90vh; }
+
+  .cs-dialog-head,
+  .cs-dialog-foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 18px;
+  }
+
+  .cs-dialog-head { justify-content: space-between; border-bottom: 1px solid var(--line); }
+  .cs-dialog-head h2 { font-family: var(--font-display); font-size: 19px; margin: 0; }
+  .cs-dialog-body { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px; overflow-y: auto; }
+  .cs-dialog-foot { border-top: 1px solid var(--line); }
+  .cs-spacer { flex: 1; }
+
+  @media (max-width: 1120px) {
+    .cs-grid { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); }
+    .cs-outcome { grid-column: 1 / -1; }
+  }
+
+  @media (max-width: 760px) {
+    .cs-grid { grid-template-columns: minmax(0, 1fr); }
+    .cs-queue-list { max-height: 320px; }
+    .cs-timer { font-size: 34px; }
+    .cs-lead-head { flex-direction: column; }
+    .cs-dialog-foot { flex-wrap: wrap; }
+  }
+
   @media (max-width: 640px) {
     .wrap { padding: 20px 14px 60px; }
     .facts { grid-template-columns: 1fr; }
@@ -691,6 +1066,12 @@
     </div>
   </header>
 
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" id="tabLeads" aria-selected="true" aria-controls="viewLeads">Leads</button>
+    <button type="button" role="tab" id="tabCalls" aria-selected="false" aria-controls="viewCalls" tabindex="-1">Call system <span class="cs-dot" id="tabDot" data-state="off" aria-hidden="true"></span></button>
+  </nav>
+
+  <div id="viewLeads" class="view" role="tabpanel" aria-labelledby="tabLeads">
   <section class="kpis" id="kpis" aria-label="Pipeline summary"></section>
 
   <section class="controls">
@@ -757,6 +1138,152 @@
   </nav>
 
   <p class="footnote" id="footnote"></p>
+  </div>
+
+  <div id="viewCalls" class="view" role="tabpanel" aria-labelledby="tabCalls" hidden>
+    <section class="cs-bar" aria-live="polite">
+      <div class="cs-status">
+        <span class="cs-dot" id="csDot" data-state="off"></span>
+        <div>
+          <div class="cs-status-title" id="csStatusTitle">Not connected</div>
+          <div class="cs-status-sub" id="csStatusSub">Open Settings to connect Twilio, or use Demo mode to try it out.</div>
+        </div>
+      </div>
+      <div class="cs-bar-actions">
+        <span class="cs-clock num" id="csClock"></span>
+        <button type="button" id="csConnectBtn" class="btn-primary">Connect</button>
+        <button type="button" id="csSettingsBtn">Settings</button>
+      </div>
+    </section>
+
+    <section class="kpis" id="csKpis" aria-label="Today's calling"></section>
+
+    <div class="cs-grid">
+      <section class="cs-panel cs-queue" aria-label="Call queue">
+        <div class="cs-panel-head">
+          <h2>Queue</h2>
+          <span class="cs-count num" id="csQueueCount"></span>
+        </div>
+        <div class="cs-filters">
+          <input type="search" id="csQ" autocomplete="off" placeholder="Search business or city&hellip;" aria-label="Search the queue">
+          <div class="cs-filter-row">
+            <select id="csCountry" autocomplete="off" aria-label="Country"></select>
+            <select id="csVertical" autocomplete="off" aria-label="Sector"></select>
+          </div>
+          <div class="cs-filter-row">
+            <select id="csBand" autocomplete="off" aria-label="Priority">
+              <option value="">All priorities</option>
+              <option value="prime">Prime</option>
+              <option value="strong">Strong</option>
+              <option value="watch">Watch</option>
+            </select>
+            <select id="csShow" autocomplete="off" aria-label="Which leads to show">
+              <option value="fresh">Not called yet</option>
+              <option value="callback">Callbacks due</option>
+              <option value="all">Everyone</option>
+            </select>
+          </div>
+        </div>
+        <ol class="cs-queue-list" id="csQueueList"></ol>
+        <div class="empty" id="csQueueEmpty" hidden>Nobody left in this queue.</div>
+      </section>
+
+      <section class="cs-panel cs-dialer" aria-label="Dialer">
+        <div class="cs-lead-empty" id="csLeadEmpty">Pick a lead from the queue to start calling.</div>
+        <div class="cs-lead" id="csLead" hidden>
+          <div class="cs-lead-head">
+            <div class="cs-lead-title">
+              <p class="eyebrow" id="csLeadMeta"></p>
+              <h2 id="csLeadName"></h2>
+              <div class="cell-sub" id="csLeadSub"></div>
+            </div>
+            <button type="button" id="csOpenLead">Lead details</button>
+          </div>
+          <div class="cs-lines" id="csLines"></div>
+          <div class="cs-hours" id="csHours"></div>
+        </div>
+
+        <div class="cs-auto" id="csAuto" hidden>
+          <span id="csAutoText"></span>
+          <button type="button" id="csAutoCancel">Cancel</button>
+        </div>
+
+        <div class="cs-call" id="csCall" data-phase="idle">
+          <div class="cs-call-state" id="csCallState">Idle</div>
+          <div class="cs-timer num" id="csTimer">0:00</div>
+          <div class="cs-call-number num" id="csCallNumber"></div>
+          <div class="cs-controls">
+            <button type="button" id="csMute" aria-pressed="false" disabled>Mute</button>
+            <button type="button" id="csKeypadBtn" aria-expanded="false" aria-controls="csKeypad" disabled>Keypad</button>
+            <button type="button" id="csHangup" class="btn-danger" disabled>Hang up</button>
+          </div>
+          <div class="cs-keypad" id="csKeypad" hidden>
+            <button type="button" data-digit="1">1</button><button type="button" data-digit="2">2</button><button type="button" data-digit="3">3</button>
+            <button type="button" data-digit="4">4</button><button type="button" data-digit="5">5</button><button type="button" data-digit="6">6</button>
+            <button type="button" data-digit="7">7</button><button type="button" data-digit="8">8</button><button type="button" data-digit="9">9</button>
+            <button type="button" data-digit="*">*</button><button type="button" data-digit="0">0</button><button type="button" data-digit="#">#</button>
+          </div>
+        </div>
+
+        <details class="cs-manual">
+          <summary>Dial a number manually</summary>
+          <div class="cs-manual-row">
+            <input type="tel" id="csManualNum" autocomplete="off" placeholder="+44 20 7946 0000" aria-label="Number to dial">
+            <button type="button" id="csManualCall">Call</button>
+          </div>
+          <p class="cs-hint">Use the international format (+44&hellip;). A number starting with 0 is treated as UK. If a lead is open, the call is logged against it.</p>
+        </details>
+
+        <div class="cs-script">
+          <p class="section-label">Call script</p>
+          <div id="csScript"></div>
+        </div>
+      </section>
+
+      <section class="cs-panel cs-outcome" aria-label="Call outcome">
+        <div class="cs-panel-head"><h2>Outcome</h2></div>
+        <div class="cs-outcomes" id="csOutcomes"></div>
+        <label class="cs-field" id="csCallbackWrap" hidden>
+          <span>Call back at (your time)</span>
+          <input type="datetime-local" id="csCallbackAt">
+          <span class="cs-hint" id="csCallbackTheirs"></span>
+        </label>
+        <label class="cs-field">
+          <span>Notes</span>
+          <textarea id="csNote" placeholder="Who picked up, what they said, anything to remember&hellip;"></textarea>
+        </label>
+        <div class="cs-save-row">
+          <button type="button" id="csSave" disabled>Save</button>
+          <button type="button" id="csSaveNext" class="btn-primary" disabled>Save &amp; next</button>
+        </div>
+        <label class="cs-toggle"><input type="checkbox" id="csAutoDial"> Auto-dial the next lead after saving</label>
+        <p class="cs-hint" id="csOutcomeHint"></p>
+        <div class="cs-history">
+          <p class="section-label">Earlier calls to this lead</p>
+          <ol id="csLeadHistory"></ol>
+        </div>
+      </section>
+    </div>
+
+    <section class="cs-panel cs-log" aria-label="Call log">
+      <div class="cs-panel-head">
+        <h2>Call log</h2>
+        <div class="cs-log-actions">
+          <span class="cs-hint" id="csLogSync"></span>
+          <button type="button" id="csExportLog">Export log CSV</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="cs-log-table">
+          <thead>
+            <tr><th>When</th><th>Business</th><th>Line</th><th>Ring</th><th>Talk</th><th>Outcome</th><th>Notes</th><th>By</th></tr>
+          </thead>
+          <tbody id="csLogRows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="csLogEmpty">No calls logged yet.</div>
+    </section>
+  </div>
 </div>
 
 <div class="scrim" id="scrim"></div>
@@ -804,6 +1331,60 @@
     </div>
   </div>
 </aside>
+
+<dialog class="cs-dialog" id="csSettings" aria-labelledby="csSettingsTitle">
+  <form id="csSettingsForm" method="dialog">
+    <div class="cs-dialog-head">
+      <h2 id="csSettingsTitle">Call system settings</h2>
+      <button type="button" class="close-x" id="csSetClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="cs-dialog-body">
+      <label class="cs-toggle cs-toggle-strong">
+        <input type="checkbox" id="csSetDemo">
+        Demo mode &mdash; simulated calls, nothing is dialled or billed
+      </label>
+
+      <label class="cs-field">
+        <span>Twilio backend URL</span>
+        <input type="url" id="csSetUrl" autocomplete="off" spellcheck="false" placeholder="https://signalboard-calls-1234-dev.twil.io">
+      </label>
+
+      <label class="cs-field">
+        <span>Passcode</span>
+        <span class="cs-pass-row">
+          <input type="password" id="csSetPass" autocomplete="off" spellcheck="false" placeholder="The CALL_PASSCODE you set on the backend">
+          <button type="button" id="csSetShowPass" aria-pressed="false">Show</button>
+        </span>
+      </label>
+
+      <label class="cs-field">
+        <span>Your name (shown in the call log and script)</span>
+        <input type="text" id="csSetCaller" autocomplete="off" maxlength="40" placeholder="e.g. Zayan">
+      </label>
+
+      <label class="cs-toggle">
+        <input type="checkbox" id="csSetHours">
+        Ask before calling a lead outside their local business hours (Mon&ndash;Fri, 9am&ndash;6pm)
+      </label>
+
+      <p class="cs-hint">
+        The URL and passcode are saved in this browser only &mdash; they are never put in the
+        public page. Setup steps are in <code>call-backend/README.md</code>.
+      </p>
+      <p class="cs-hint">
+        UK rules: don't call numbers on the Corporate TPS without consent, and stop calling
+        anyone who asks &mdash; log them as <strong>Do not call</strong> and they leave the queue for good.
+      </p>
+      <p class="cs-error" id="csSetError" role="alert"></p>
+    </div>
+    <div class="cs-dialog-foot">
+      <button type="button" id="csSetForget">Forget passcode</button>
+      <span class="cs-spacer"></span>
+      <button type="button" id="csSetCancel">Cancel</button>
+      <button type="submit" class="btn-primary" id="csSetSave">Save</button>
+    </div>
+  </form>
+</dialog>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -1544,6 +2125,1248 @@
       copy(csv, "CSV");
     }
   });
+
+
+  /* ================================================================
+     Call system — Twilio browser dialer
+     ----------------------------------------------------------------
+     Places calls through the Twilio Voice SDK using a short-lived
+     token from call-backend/ (a Twilio Function). The backend URL and
+     passcode live only in this browser's localStorage — never in this
+     public page. Demo mode simulates calls so the whole flow can be
+     used without Twilio; demo calls never touch the real pipeline.
+     ================================================================ */
+
+  var CS_SDK_URL = "https://cdn.jsdelivr.net/npm/@twilio/voice-sdk@2.18.5/dist/twilio.min.js";
+  var CS_SDK_SRI = "sha384-LUG7DmzDPWNKRYoqyGpV4d/IByMLiya/oUhMSc/4/6hi0wbzO/8PffM4lzeFEYS8";
+  var CS_SETTINGS_KEY = "signalboard.calls.settings.v1";
+  var CS_LOG_KEY = "signalboard.calls.log.v1";
+  var CS_LOG_CAP = 5000;
+  var CS_QUEUE_CAP = 200;
+
+  // Mirrors the backend's refusals only so the UI can explain before dialling;
+  // call-backend/functions/voice.protected.js is what actually enforces them.
+  var CS_BLOCKED = ["+449", "+4470", "+44871", "+44872", "+44873"];
+
+  var CS_OUTCOMES = [
+    { id: "no_answer",      label: "No answer",        status: "contacted" },
+    { id: "voicemail",      label: "Left voicemail",   status: "contacted" },
+    { id: "gatekeeper",     label: "Gatekeeper",       status: "contacted", callback: true, tone: "warn" },
+    { id: "callback",       label: "Call back later",  status: "contacted", callback: true, tone: "warn" },
+    { id: "interested",     label: "Interested",       status: "replied",   callback: true, tone: "good" },
+    { id: "meeting",        label: "Meeting booked",   status: "replied",   callback: true, tone: "good" },
+    { id: "not_interested", label: "Not interested",   status: "lost",      tone: "bad" },
+    { id: "wrong_number",   label: "Wrong number",     status: "lost",      tone: "bad" },
+    { id: "do_not_call",    label: "Do not call",      status: "lost",      tone: "bad", dnc: true }
+  ];
+
+  // Pipeline stage ranks: a call only moves a lead forward, never back —
+  // an unanswered call must not demote someone who already replied.
+  var CS_RANK = { "new": 0, contacted: 1, lost: 1, replied: 2, won: 3 };
+
+  var CS_NOUN = {
+    "Dental": "dental practices",
+    "Aesthetics": "aesthetics clinics",
+    "Salon & Spa": "salons and spas",
+    "Property": "estate agents",
+    "Legal & Immigration": "law firms",
+    "Medical": "clinics"
+  };
+
+  // Approximate: one zone per state. The few split states follow their
+  // biggest city, which is where these leads were scraped.
+  var CS_US_TZ = {
+    CA: "America/Los_Angeles", WA: "America/Los_Angeles", OR: "America/Los_Angeles", NV: "America/Los_Angeles",
+    AZ: "America/Phoenix",
+    CO: "America/Denver", UT: "America/Denver", NM: "America/Denver", MT: "America/Denver", WY: "America/Denver", ID: "America/Boise",
+    TX: "America/Chicago", IL: "America/Chicago", MN: "America/Chicago", WI: "America/Chicago", MO: "America/Chicago",
+    LA: "America/Chicago", TN: "America/Chicago", OK: "America/Chicago", KS: "America/Chicago", NE: "America/Chicago",
+    IA: "America/Chicago", AR: "America/Chicago", MS: "America/Chicago", AL: "America/Chicago", ND: "America/Chicago", SD: "America/Chicago",
+    AK: "America/Anchorage", HI: "Pacific/Honolulu"
+  };
+
+  function csEl(id) { return document.getElementById(id); }
+
+  function csLoadJson(key, fallback) {
+    try {
+      var v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : fallback;
+    } catch (e) { return fallback; }
+  }
+
+  function csSaveJson(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+  }
+
+  var csSettings = Object.assign(
+    { backendUrl: "", passcode: "", caller: "", demo: true, hoursGuard: true, autoDial: false },
+    csLoadJson(CS_SETTINGS_KEY, {})
+  );
+  var csLogs = csLoadJson(CS_LOG_KEY, []);
+  if (!Array.isArray(csLogs)) csLogs = [];
+
+  var LEAD_BY_ID = {};
+  LEADS.forEach(function (l) { LEAD_BY_ID[l.id] = l; });
+
+  var csConn = "off";          // off | connecting | ready | demo | error
+  var csConnDetail = "";
+  var csDevice = null;
+  var csTokenInfo = null;
+  var csCall = null;           // the live Twilio Call, or the demo stand-in
+  var csSession = null;        // timings + target of the current / just-ended call
+  var csLeadId = null;         // lead loaded in the dialer
+  var csOutcome = null;
+  var csQueueCache = [];
+  var csTimerInterval = null;
+  var csAutoTimer = null;
+  var csRemote = "unknown";    // unknown | synced | missing | offline
+  var csBooted = false;
+
+  /* ---------- small helpers ---------- */
+
+  function csDur(sec) {
+    sec = Math.max(0, Math.round(sec || 0));
+    var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    if (h) return h + "h " + (m < 10 ? "0" : "") + m + "m";
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  function csWhen(ms) {
+    return new Date(ms).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  }
+
+  function csUuid() {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID();
+    return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 12);
+  }
+
+  function csOutcomeDef(id) {
+    for (var i = 0; i < CS_OUTCOMES.length; i++) if (CS_OUTCOMES[i].id === id) return CS_OUTCOMES[i];
+    return null;
+  }
+
+  function csOutcomeChip(id) {
+    var d = csOutcomeDef(id);
+    if (!d) return "";
+    return '<span class="cs-chip" data-tone="' + (d.tone || "") + '">' + esc(d.label) + "</span>";
+  }
+
+  function csErrText(err) {
+    if (!err) return "Unknown error";
+    var code = err.code;
+    if (code === 31401 || code === 31402 || err.name === "NotAllowedError") {
+      return "Microphone blocked — allow microphone access for this site and try again.";
+    }
+    if (code === 20101 || code === 20104) return "Calling token rejected or expired — reconnect.";
+    return (err.description || err.message || String(err)) + (code ? " (" + code + ")" : "");
+  }
+
+  /* A number in +E.164, or null. Extensions are dropped; a bare national
+     number starting with 0 is treated as UK, the default calling market. */
+  function csE164(raw) {
+    var s = String(raw || "").trim();
+    if (!s) return null;
+    s = s.split(/\s*(?:ext\.?|extension|x)\s*\d/i)[0];
+    var plus = s.charAt(0) === "+";
+    var d = s.replace(/\D/g, "");
+    if (!plus) {
+      if (d.indexOf("00") === 0) d = d.slice(2);
+      else if (d.charAt(0) === "0") d = "44" + d.slice(1);
+      else return null;
+    }
+    var n = "+" + d;
+    return /^\+[1-9]\d{7,14}$/.test(n) ? n : null;
+  }
+
+  function csBlocked(number) {
+    return CS_BLOCKED.some(function (p) { return number.indexOf(p) === 0; });
+  }
+
+  // Only numbers the backend will actually connect: a UK 070 "personal"
+  // number looks like a mobile but is premium-rate, and gets refused.
+  function csLinesFor(lead) {
+    var lines = [];
+    var main = csE164(lead.phone);
+    if (main && !csBlocked(main)) lines.push({ id: "main", label: "main line", number: main, display: lead.phone });
+    if (lead.wa) {
+      var mob = "+" + lead.wa;
+      if (mob !== main && /^\+[1-9]\d{7,14}$/.test(mob) && !csBlocked(mob)) {
+        var onWa = lead.waSrc === "verified" || lead.waSrc === "confirmed-wa.me";
+        lines.push({ id: "mobile", label: onWa ? "mobile (on WhatsApp)" : "mobile", number: mob, display: mob });
+      }
+    }
+    return lines;
+  }
+
+  function csCanDial(number) {
+    if (csBlocked(number)) return "Premium-rate numbers are blocked.";
+    if (!csSettings.demo && csTokenInfo && Array.isArray(csTokenInfo.allowedPrefixes)) {
+      var ok = csTokenInfo.allowedPrefixes.some(function (p) { return number.indexOf(p) === 0; });
+      if (!ok) return "Your backend only allows " + csTokenInfo.allowedPrefixes.join(", ") +
+        " — add this country to ALLOWED_PREFIXES to call it.";
+    }
+    return null;
+  }
+
+  function csTzFor(lead) {
+    if (!lead) return null;
+    if (lead.country === "UK") return "Europe/London";
+    if (lead.country === "UAE") return "Asia/Dubai";
+    if (lead.country === "USA") return CS_US_TZ[lead.state] || "America/New_York";
+    return null;
+  }
+
+  function csLocalParts(tz, date) {
+    var o = {};
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: tz, weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+    }).formatToParts(date || new Date()).forEach(function (p) { o[p.type] = p.value; });
+    return { weekday: o.weekday, label: o.hour + ":" + o.minute, hour: parseInt(o.hour, 10), minute: parseInt(o.minute, 10) };
+  }
+
+  // The next 10:00 on a weekday in the lead's own time zone, at least an hour
+  // out. Calling the UK from Pakistan, "tomorrow, same time" usually lands
+  // after their office has shut.
+  function csNextBusinessMorning(tz) {
+    var t = Math.ceil((Date.now() + 3600 * 1000) / 3600000) * 3600000;
+    for (var i = 0; i < 24 * 8; i++, t += 3600000) {
+      var p = csLocalParts(tz, new Date(t));
+      if (p.hour === 10 && p.minute === 0 && p.weekday !== "Sat" && p.weekday !== "Sun") return t;
+    }
+    return Date.now() + 24 * 3600 * 1000;
+  }
+
+  function csToLocalInput(ms) {
+    var t = new Date(ms);
+    var pad = function (x) { return (x < 10 ? "0" : "") + x; };
+    return t.getFullYear() + "-" + pad(t.getMonth() + 1) + "-" + pad(t.getDate()) +
+      "T" + pad(t.getHours()) + ":" + pad(t.getMinutes());
+  }
+
+  function csRenderCallbackTheirs() {
+    var el = csEl("csCallbackTheirs");
+    var lead = csLeadId ? LEAD_BY_ID[csLeadId] : null;
+    var tz = csTzFor(lead);
+    var ms = new Date(csEl("csCallbackAt").value).getTime();
+    el.textContent = tz && !isNaN(ms) ? "That's " + (function (p) { return p.weekday + " " + p.label; })(csLocalParts(tz, new Date(ms))) + " their time" : "";
+  }
+
+  function csBusinessHours(tz) {
+    var p = csLocalParts(tz);
+    var mins = p.hour * 60 + p.minute;
+    var weekend = p.weekday === "Sat" || p.weekday === "Sun";
+    return { open: !weekend && mins >= 540 && mins < 1080, parts: p };
+  }
+
+  /* ---------- logs ---------- */
+
+  function csPersistLogs() {
+    if (csLogs.length > CS_LOG_CAP) csLogs.length = CS_LOG_CAP;
+    csSaveJson(CS_LOG_KEY, csLogs);
+  }
+
+  // Demo and real calls are kept apart: demo mode shows demo history, real
+  // mode shows real history, so testing never muddies the real numbers.
+  function csModeLogs() {
+    var demo = !!csSettings.demo;
+    return csLogs.filter(function (g) { return !!g.demo === demo; });
+  }
+
+  function csLogsByLead() {
+    var map = {};
+    csModeLogs().forEach(function (g) {
+      if (!g.leadId) return;
+      (map[g.leadId] = map[g.leadId] || []).push(g);
+    });
+    Object.keys(map).forEach(function (k) {
+      map[k].sort(function (a, b) { return b.startedAt - a.startedAt; });
+    });
+    return map;
+  }
+
+  // A real "do not call" applies in every mode — it's a legal obligation,
+  // not a preference that a demo session should be able to forget.
+  function csDncSet() {
+    var set = {};
+    csLogs.forEach(function (g) {
+      if (g.leadId && g.outcome === "do_not_call" && (!g.demo || csSettings.demo)) set[g.leadId] = true;
+    });
+    return set;
+  }
+
+  // A callback stays due through later unanswered attempts, and clears once
+  // a later call actually reaches someone (or books a new time).
+  function csPendingCallback(hist) {
+    for (var i = 0; i < (hist || []).length; i++) {
+      var g = hist[i];
+      if (g.callbackAt) return g.callbackAt;
+      if (g.outcome !== "no_answer" && g.outcome !== "voicemail") return null;
+    }
+    return null;
+  }
+
+  function csEndOfToday() {
+    var d = new Date();
+    d.setHours(23, 59, 59, 999);
+    return d.getTime();
+  }
+
+  /* ---------- Supabase call_log sync ---------- */
+
+  function csRowFromLog(g) {
+    return {
+      id: g.id, lead_id: g.leadId, line: g.line, manual_number: g.manualNumber || null,
+      started_at: new Date(g.startedAt).toISOString(), ring_sec: g.ringSec || 0, talk_sec: g.talkSec || 0,
+      outcome: g.outcome, note: g.note || "",
+      callback_at: g.callbackAt ? new Date(g.callbackAt).toISOString() : null,
+      caller: g.caller || ""
+    };
+  }
+
+  function csPushLog(g) {
+    if (g.demo) return Promise.resolve(false);
+    return fetch(SUPABASE_URL + "/rest/v1/call_log", {
+      method: "POST",
+      // ignore-duplicates, not merge: the table is insert-only by design, so
+      // a retried push must be a no-op rather than an update it can't do.
+      headers: supabaseHeaders({ "Prefer": "resolution=ignore-duplicates,return=minimal" }),
+      body: JSON.stringify([csRowFromLog(g)])
+    }).then(function (r) {
+      if (r.ok) { g.synced = true; csPersistLogs(); csRemote = "synced"; }
+      else if (r.status === 404) csRemote = "missing";
+      else csRemote = "offline";
+      csRenderSync();
+      return r.ok;
+    }).catch(function () {
+      csRemote = "offline";
+      csRenderSync();
+      return false;
+    });
+  }
+
+  function csLoadRemoteLogs() {
+    return fetch(SUPABASE_URL + "/rest/v1/call_log?select=*&order=started_at.desc&limit=" + CS_LOG_CAP, {
+      headers: supabaseHeaders()
+    }).then(function (r) {
+      if (r.status === 404) { csRemote = "missing"; return null; }
+      if (!r.ok) throw new Error("call_log read " + r.status);
+      return r.json();
+    }).then(function (rows) {
+      if (!rows) { csRenderSync(); return; }
+      csRemote = "synced";
+      var have = {};
+      csLogs.forEach(function (g) { have[g.id] = g; });
+      rows.forEach(function (row) {
+        if (have[row.id]) { have[row.id].synced = true; return; }
+        csLogs.push({
+          id: row.id, leadId: row.lead_id, line: row.line, manualNumber: row.manual_number,
+          startedAt: new Date(row.started_at).getTime(), ringSec: row.ring_sec || 0, talkSec: row.talk_sec || 0,
+          outcome: row.outcome, note: row.note || "",
+          callbackAt: row.callback_at ? new Date(row.callback_at).getTime() : null,
+          caller: row.caller || "", demo: false, synced: true
+        });
+      });
+      csLogs.sort(function (a, b) { return b.startedAt - a.startedAt; });
+      csPersistLogs();
+      csLogs.filter(function (g) { return !g.synced && !g.demo; }).forEach(csPushLog);
+      csRenderAll();
+    }).catch(function () {
+      csRemote = "offline";
+      csRenderSync();
+    });
+  }
+
+  /* ---------- Twilio connection ---------- */
+
+  function csLoadSdk() {
+    return new Promise(function (resolve, reject) {
+      if (window.Twilio && window.Twilio.Device) return resolve();
+      var s = document.createElement("script");
+      s.src = CS_SDK_URL;
+      s.integrity = CS_SDK_SRI;
+      s.crossOrigin = "anonymous";
+      s.onload = function () { resolve(); };
+      s.onerror = function () { reject(new Error("Couldn't load the Twilio Voice SDK — check your connection.")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function csFetchToken() {
+    var url = csSettings.backendUrl.replace(/\/+$/, "") + "/token";
+    // Form-encoded on purpose: a JSON body would trigger a CORS preflight,
+    // which a Twilio Function can't answer. This stays a "simple" request.
+    var body = new URLSearchParams({ passcode: csSettings.passcode });
+    return fetch(url, { method: "POST", body: body }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (data) {
+        if (!r.ok || !data.token) throw new Error(data.error || ("Backend returned " + r.status));
+        return data;
+      });
+    }, function () {
+      throw new Error("Couldn't reach the backend — check the URL, and that this site is in ALLOWED_ORIGINS.");
+    });
+  }
+
+  function csSetConn(state, detail) {
+    csConn = state;
+    csConnDetail = detail || "";
+    csRenderConn();
+    csRenderCallUi();
+  }
+
+  function csConnect() {
+    if (csSession && !csSession.ended) return;
+    if (csSettings.demo) {
+      csSetConn("demo", "Calls are simulated — nothing is dialled, billed, or written to your pipeline.");
+      return;
+    }
+    if (!csSettings.backendUrl || !csSettings.passcode) {
+      csSetConn("off", "Add your Twilio backend URL and passcode in Settings.");
+      csOpenSettings();
+      return;
+    }
+    csSetConn("connecting", "Getting a calling token…");
+    csLoadSdk().then(csFetchToken).then(function (info) {
+      csTokenInfo = info;
+      if (csDevice) { try { csDevice.destroy(); } catch (e) {} }
+      csDevice = new window.Twilio.Device(info.token, {
+        closeProtection: true,          // browser warns before closing mid-call
+        codecPreferences: ["opus", "pcmu"],
+        logLevel: "error"
+      });
+      csDevice.on("error", function (err) {
+        if (err && (err.code === 20101 || err.code === 20104)) csSetConn("error", csErrText(err));
+        else toast("Twilio: " + csErrText(err));
+      });
+      csDevice.on("tokenWillExpire", function () {
+        csFetchToken().then(function (next) {
+          csTokenInfo = next;
+          csDevice.updateToken(next.token);
+        }).catch(function (err) {
+          csSetConn("error", "Couldn't renew the calling token: " + err.message);
+        });
+      });
+      csSetConn("ready", "Calling from " + info.callerId + " · can dial " + (info.allowedPrefixes || []).join(", "));
+    }).catch(function (err) {
+      csSetConn("error", err.message || String(err));
+    });
+  }
+
+  function csDisconnect() {
+    if (csDevice) { try { csDevice.destroy(); } catch (e) {} }
+    csDevice = null;
+    csTokenInfo = null;
+    csSetConn("off", csSettings.demo ? "" : "Disconnected.");
+  }
+
+  /* ---------- placing calls ---------- */
+
+  function csStartCall(number, meta) {
+    if (csSession && !csSession.ended) { toast("You're already on a call"); return; }
+    if (csSession && csSession.ended && !csSession.saved &&
+        !window.confirm("You haven't saved an outcome for the last call. Discard it?")) return;
+    if (csConn !== "ready" && csConn !== "demo") {
+      toast(csSettings.demo ? "Press Connect first" : "Connect to Twilio first");
+      return;
+    }
+    var why = csCanDial(number);
+    if (why) { toast(why); return; }
+
+    var lead = meta.leadId ? LEAD_BY_ID[meta.leadId] : null;
+    if (lead && csSettings.hoursGuard) {
+      var tz = csTzFor(lead);
+      if (tz) {
+        var bh = csBusinessHours(tz);
+        if (!bh.open && !window.confirm("It's " + bh.parts.weekday + " " + bh.parts.label + " for " + lead.name +
+            " — outside business hours. Call anyway?")) return;
+      }
+    }
+
+    csCancelAuto();
+    csOutcome = null;
+    csEl("csOutcomeHint").textContent = "";
+    var session = {
+      leadId: meta.leadId || null, line: meta.line, number: number, display: meta.display || number,
+      startedAt: Date.now(), ringAt: null, acceptedAt: null, endedAt: null,
+      phase: "connecting", ended: false, saved: false, muted: false, demo: !!csSettings.demo
+    };
+    csSession = session;
+    clearInterval(csTimerInterval);
+    csTimerInterval = setInterval(csTick, 500);
+    csRenderAll();
+
+    if (session.demo) csDemoDial(session);
+    else csTwilioDial(session);
+  }
+
+  function csTwilioDial(session) {
+    if (!csDevice) { toast("Not connected to Twilio"); csEnded(session); return; }
+    csDevice.connect({ params: { To: session.number } }).then(function (call) {
+      if (csSession !== session || session.ended) { call.disconnect(); return; }
+      csCall = call;
+      call.on("ringing", function () { csPhase(session, "ringing"); });
+      // The backend dials with answerOnBridge, so "accept" lands when the
+      // other side actually picks up — which is what talk time measures.
+      call.on("accept", function () { csPhase(session, "live"); });
+      call.on("disconnect", function () { csEnded(session); });
+      call.on("cancel", function () { csEnded(session); });
+      call.on("reject", function () { csEnded(session); });
+      call.on("error", function (err) { toast("Call problem: " + csErrText(err)); });
+    }).catch(function (err) {
+      toast("Couldn't place the call: " + csErrText(err));
+      csEnded(session);
+    });
+  }
+
+  function csDemoDial(session) {
+    var timers = [];
+    function later(ms, fn) { timers.push(setTimeout(fn, ms)); }
+    var answers = Math.random() < 0.6;
+    later(700, function () { csPhase(session, "ringing"); });
+    if (answers) later(700 + 1800 + Math.random() * 3500, function () { csPhase(session, "live"); });
+    else later(700 + 8000, function () { csEnded(session); });
+    csCall = {
+      mute: function () {},
+      sendDigits: function () {},
+      disconnect: function () {
+        timers.forEach(clearTimeout);
+        csEnded(session);
+      }
+    };
+  }
+
+  function csPhase(session, phase) {
+    if (csSession !== session || session.ended) return;
+    if (phase === "ringing" && !session.ringAt) session.ringAt = Date.now();
+    if (phase === "live" && !session.acceptedAt) {
+      session.acceptedAt = Date.now();
+      if (!session.ringAt) session.ringAt = session.startedAt;
+    }
+    session.phase = phase;
+    csRenderConn();
+    csRenderCallUi();
+  }
+
+  function csEnded(session) {
+    if (csSession !== session || session.ended) return;
+    session.ended = true;
+    session.endedAt = Date.now();
+    session.phase = "ended";
+    csCall = null;
+    clearInterval(csTimerInterval);
+    if (!session.acceptedAt) {
+      csOutcome = "no_answer";
+      csEl("csOutcomeHint").textContent = "Nobody picked up, so it's marked No answer — change it if that's wrong, then save.";
+    } else {
+      csEl("csOutcomeHint").textContent = "Pick what happened, add a note, then save.";
+    }
+    csRenderAll();
+  }
+
+  function csHangup() {
+    if (!csSession || csSession.ended) return;
+    if (csCall) csCall.disconnect();
+    else csEnded(csSession);
+  }
+
+  function csTick() {
+    var s = csSession, el = csEl("csTimer");
+    if (!s) { el.textContent = "0:00"; return; }
+    var end = s.ended ? s.endedAt : Date.now();
+    el.textContent = s.acceptedAt ? csDur((end - s.acceptedAt) / 1000) : csDur((end - (s.ringAt || s.startedAt)) / 1000);
+  }
+
+  /* ---------- auto-dial ---------- */
+
+  function csStartAuto(lead) {
+    if (!csSettings.autoDial || (csConn !== "ready" && csConn !== "demo")) return;
+    var lines = csLinesFor(lead);
+    if (!lines.length) return;
+    var left = 5;
+    var text = function () { csEl("csAutoText").textContent = "Calling " + lead.name + " in " + left + "…"; };
+    text();
+    csEl("csAuto").hidden = false;
+    csAutoTimer = setInterval(function () {
+      left--;
+      if (left > 0) { text(); return; }
+      csCancelAuto();
+      if (csLeadId === lead.id) {
+        csStartCall(lines[0].number, { leadId: lead.id, line: lines[0].id, display: lines[0].display });
+      }
+    }, 1000);
+  }
+
+  function csCancelAuto() {
+    if (csAutoTimer) clearInterval(csAutoTimer);
+    csAutoTimer = null;
+    csEl("csAuto").hidden = true;
+  }
+
+  /* ---------- saving an outcome ---------- */
+
+  function csApplyToPipeline(leadId, def, log) {
+    var e = entry(leadId);
+    var cur = e.status || "new";
+    var next = cur;
+    if (cur !== "won") {
+      if (def.dnc) next = "lost";   // an explicit "don't call me" overrides an earlier "interested"
+      else if (def.status === "replied" && CS_RANK.replied > (CS_RANK[cur] || 0)) next = "replied";
+      else if (def.status === "lost" && (cur === "new" || cur === "contacted")) next = "lost";
+      else if (def.status === "contacted" && cur === "new") next = "contacted";
+    }
+    var stamp = "[" + csWhen(log.startedAt) + " · call" +
+      (log.talkSec ? " " + csDur(log.talkSec) : "") + " · " + def.label +
+      (log.callbackAt ? " · call back " + csWhen(log.callbackAt) : "") + "]";
+    e.note = (e.note ? e.note.replace(/\s+$/, "") + "\n" : "") + stamp + (log.note ? " " + log.note : "");
+    e.status = next;
+    e.updatedAt = Date.now();
+    persist(leadId);
+    render();
+  }
+
+  function csSaveOutcome(goNext) {
+    if (csSession && !csSession.ended) { toast("Hang up before saving"); return; }
+    var def = csOutcomeDef(csOutcome);
+    if (!def) { toast("Choose what happened on the call"); return; }
+    var s = csSession;
+    var leadId = s ? s.leadId : csLeadId;
+    if (!leadId && !(s && s.line === "manual")) { toast("Pick a lead first"); return; }
+
+    var cbVal = csEl("csCallbackAt").value;
+    var callbackAt = def.callback && cbVal ? new Date(cbVal).getTime() : null;
+    if (callbackAt !== null && isNaN(callbackAt)) callbackAt = null;
+    var log = {
+      id: csUuid(),
+      leadId: leadId || null,
+      line: s ? s.line : "main",
+      manualNumber: s && s.line === "manual" ? s.number : null,
+      startedAt: s ? s.startedAt : Date.now(),
+      ringSec: s ? Math.round(((s.acceptedAt || s.endedAt) - (s.ringAt || s.startedAt)) / 1000) : 0,
+      // At least 1s once answered: "picked up" is read as talkSec > 0, and
+      // a very short pickup must not round down into looking unanswered.
+      talkSec: s && s.acceptedAt ? Math.max(1, Math.round((s.endedAt - s.acceptedAt) / 1000)) : 0,
+      outcome: def.id,
+      note: csEl("csNote").value.trim(),
+      callbackAt: callbackAt,
+      caller: csSettings.caller || "",
+      demo: s ? s.demo : !!csSettings.demo,
+      noDial: !s,                        // logged without placing a call here
+      synced: false
+    };
+
+    var prevQueue = csQueueCache.slice();
+    var prevIdx = -1;
+    for (var i = 0; i < prevQueue.length; i++) if (prevQueue[i].id === leadId) { prevIdx = i; break; }
+
+    csLogs.unshift(log);
+    csPersistLogs();
+    if (!log.demo && log.leadId) csApplyToPipeline(log.leadId, def, log);
+    if (!log.demo) csPushLog(log);
+    if (s) s.saved = true;
+    toast((log.demo ? "Demo call logged: " : "Logged: ") + def.label);
+
+    csSession = null;
+    csOutcome = null;
+    csEl("csNote").value = "";
+    csEl("csCallbackAt").value = "";
+    csEl("csOutcomeHint").textContent = "";
+    csRenderAll();
+
+    if (!goNext) return;
+    var still = {};
+    csQueueCache.forEach(function (l) { still[l.id] = true; });
+    var next = null;
+    for (var j = prevIdx + 1; j < prevQueue.length; j++) {
+      if (still[prevQueue[j].id] && prevQueue[j].id !== leadId) { next = prevQueue[j]; break; }
+    }
+    if (!next) {
+      for (var k = 0; k < csQueueCache.length; k++) if (csQueueCache[k].id !== leadId) { next = csQueueCache[k]; break; }
+    }
+    if (!next) { toast("That's the end of this queue"); return; }
+    csSelectLead(next.id, { force: true });
+    csEl("csCall").scrollIntoView({ block: "nearest", behavior: "smooth" });
+    csStartAuto(next);
+  }
+
+  /* ---------- selecting a lead ---------- */
+
+  function csSelectLead(id, opts) {
+    if (csSession && !csSession.ended) { toast("Hang up before switching leads"); return false; }
+    if (csSession && csSession.ended && !csSession.saved && !(opts && opts.force) &&
+        !window.confirm("You haven't saved an outcome for the last call. Discard it?")) return false;
+    csCancelAuto();
+    csSession = null;
+    csOutcome = null;
+    csEl("csNote").value = "";
+    csEl("csCallbackAt").value = "";
+    csEl("csOutcomeHint").textContent = "";
+    csLeadId = id;
+    csRenderAll();
+    return true;
+  }
+
+  /* ---------- rendering ---------- */
+
+  function csRenderConn() {
+    var live = csSession && !csSession.ended;
+    var state = live ? "busy" : csConn;
+    var titles = {
+      off: "Not connected", connecting: "Connecting…", ready: "Ready to call",
+      demo: "Demo mode", error: "Connection problem", busy: csSession && csSession.phase === "live" ? "On a call" : "Dialling…"
+    };
+    csEl("csDot").dataset.state = state;
+    csEl("tabDot").dataset.state = state;
+    csEl("csStatusTitle").textContent = titles[state];
+    csEl("csStatusSub").textContent = csConnDetail ||
+      (csConn === "off" ? "Open Settings to connect Twilio, or turn on Demo mode to try it out." : "");
+
+    var btn = csEl("csConnectBtn");
+    btn.disabled = csConn === "connecting" || !!live;
+    btn.className = csConn === "ready" || csConn === "demo" ? "" : "btn-primary";
+    btn.textContent = csConn === "connecting" ? "Connecting…"
+      : csConn === "ready" ? "Disconnect"
+      : csConn === "demo" ? "Leave demo"
+      : csConn === "error" ? "Retry" : "Connect";
+  }
+
+  function csRenderKpis() {
+    var start = new Date();
+    start.setHours(0, 0, 0, 0);
+    var today = csModeLogs().filter(function (g) { return g.startedAt >= start.getTime() && !g.noDial; });
+    var connected = today.filter(function (g) { return g.talkSec > 0; }).length;
+    var talk = today.reduce(function (sum, g) { return sum + (g.talkSec || 0); }, 0);
+    var positive = today.filter(function (g) { return g.outcome === "interested" || g.outcome === "meeting"; }).length;
+    var meetings = today.filter(function (g) { return g.outcome === "meeting"; }).length;
+    var byLead = csLogsByLead();
+    var eod = csEndOfToday();
+    var due = Object.keys(byLead).filter(function (id) {
+      var cb = csPendingCallback(byLead[id]);
+      return cb && cb <= eod;
+    }).length;
+
+    var tiles = [
+      { label: "Calls today", value: today.length, note: csSettings.demo ? "demo calls only" : "placed from this dialer" },
+      { label: "Picked up", value: connected, note: today.length ? Math.round(connected / today.length * 100) + "% of calls" : "none yet", cls: "is-accent" },
+      { label: "Talk time", value: csDur(talk), note: connected ? "avg " + csDur(talk / connected) + " per pickup" : "—" },
+      { label: "Interested", value: positive, note: meetings + (meetings === 1 ? " meeting" : " meetings") + " booked", cls: "is-prime" },
+      { label: "Callbacks due", value: due, note: "today or overdue" }
+    ];
+    csEl("csKpis").innerHTML = tiles.map(function (t) {
+      return '<div class="kpi">' +
+        '<span class="kpi-label">' + esc(t.label) + "</span>" +
+        '<span class="kpi-value ' + (t.cls || "") + '">' + esc(t.value) + "</span>" +
+        '<span class="kpi-note">' + esc(t.note) + "</span>" +
+        "</div>";
+    }).join("");
+  }
+
+  function csQueue() {
+    var country = csEl("csCountry").value;
+    var vertical = csEl("csVertical").value;
+    var band = csEl("csBand").value;
+    var show = csEl("csShow").value;
+    var q = csEl("csQ").value.trim().toLowerCase();
+    var byLead = csLogsByLead();
+    var dnc = csDncSet();
+    var eod = csEndOfToday();
+
+    var list = LEADS.filter(function (l) {
+      if (dnc[l.id]) return false;
+      if (country && l.country !== country) return false;
+      if (vertical && l.vertical !== vertical) return false;
+      if (band && l.band !== band) return false;
+      if (q && (l.name + " " + l.city + " " + (l.type || "")).toLowerCase().indexOf(q) === -1) return false;
+      if (!csLinesFor(l).length) return false;
+      var hist = byLead[l.id];
+      if (show === "fresh") {
+        var st = statusOf(l.id);
+        return !hist && st !== "won" && st !== "lost";
+      }
+      if (show === "callback") {
+        var cb = csPendingCallback(hist);
+        return !!(cb && cb <= eod);
+      }
+      return true;
+    });
+
+    if (show === "callback") {
+      list.sort(function (a, b) { return csPendingCallback(byLead[a.id]) - csPendingCallback(byLead[b.id]); });
+    } else {
+      list.sort(function (a, b) { return (b.score - a.score) || (b.reviews - a.reviews); });
+    }
+    return { list: list, byLead: byLead };
+  }
+
+  function csRenderQueue() {
+    var r = csQueue();
+    csQueueCache = r.list;
+    var shown = r.list.slice(0, CS_QUEUE_CAP);
+    var now = Date.now();
+    csEl("csQueueCount").textContent = r.list.length > CS_QUEUE_CAP
+      ? "top " + CS_QUEUE_CAP + " of " + r.list.length.toLocaleString()
+      : r.list.length.toLocaleString() + (r.list.length === 1 ? " lead" : " leads");
+    csEl("csQueueList").innerHTML = shown.map(function (l) {
+      var hist = r.byLead[l.id] || [];
+      var cb = csPendingCallback(hist);
+      var tag = cb
+        ? '<span class="cs-chip" data-tone="' + (cb < now ? "bad" : "warn") + '">Call back ' + esc(csWhen(cb)) + "</span>"
+        : (hist.length ? csOutcomeChip(hist[0].outcome) : "");
+      return '<li class="cs-q-item" data-id="' + esc(l.id) + '" aria-current="' + (l.id === csLeadId) + '" tabindex="0">' +
+        '<span class="cs-q-name">' + esc(l.name) + "</span>" +
+        '<span class="cs-q-score score-num ' + l.band + '">' + l.score + "</span>" +
+        '<span class="cs-q-sub">' + esc(l.city) + " · " + esc(l.vertical) + "</span>" +
+        '<span class="cs-q-tags">' + tag + "</span>" +
+        "</li>";
+    }).join("");
+    csEl("csQueueEmpty").hidden = r.list.length > 0;
+  }
+
+  function csScriptFor(lead) {
+    var me = csSettings.caller || "[your name]";
+    var noun = CS_NOUN[lead.vertical] || "local businesses";
+    var hook;
+    if (lead.closes !== null && lead.closes >= 19) {
+      hook = "You're open until " + fmtClose(lead.closes) + " — I'd guess a fair few messages come in after the front desk has gone home?";
+    } else if (lead.reviews >= 500) {
+      hook = "With " + lead.reviews.toLocaleString() + " reviews you must get a lot of people asking the same things — prices, availability, can they book in?";
+    } else {
+      hook = "Most " + noun + " get the same handful of questions over and over — prices, availability, booking.";
+    }
+    var steps = [
+      ["Opener", "Hi, is that the owner or manager at " + lead.name + "? … Hi, it's " + me + " — I'll be quick. I help " + noun + " with how they handle customer enquiries."],
+      ["Hook", hook],
+      ["Question", "Who picks those up at the moment — and what happens to the ones that come in while you're busy or closed?"],
+      ["Pitch", "I set up an assistant on WhatsApp and your website that answers the repeat questions straight away, books people in, and passes anything unusual straight to your team."],
+      ["Ask", "Would a 15-minute call this week be worth it, so I can show you what it would pick up for you?"]
+    ];
+    var objections = [
+      ["“We're too busy.”", "That's exactly why — it takes the repetitive ones off your plate. Can I send a two-minute example on WhatsApp instead?"],
+      ["“Just email me.”", "Happy to — what's the best address?" + (lead.email ? " (Their website lists " + lead.email + ".)" : "")],
+      ["“We already have a receptionist.”", "It doesn't replace them — it covers what comes in while they're on the phone or after they've gone home."],
+      ["“How much is it?”", "It depends on your volume, which is what the short call is for — I'd rather not quote you something that doesn't fit."],
+      ["“Not interested.”", "No problem, thanks for your time. Log Not interested — or Do not call if they ask you not to ring again."]
+    ];
+    var gate = "“Who's the best person to speak to about how you handle customer enquiries, and when's a good time to catch them?” Then log Gatekeeper with a call-back time.";
+    return steps.map(function (s) {
+      return "<h3>" + esc(s[0]) + "</h3><p>" + esc(s[1]) + "</p>";
+    }).join("") +
+      "<h3>If a receptionist answers</h3><p>" + esc(gate) + "</p>" +
+      '<h3>Objections</h3><dl class="cs-objections">' + objections.map(function (o) {
+        return "<dt>" + esc(o[0]) + "</dt><dd>" + esc(o[1]) + "</dd>";
+      }).join("") + "</dl>";
+  }
+
+  function csRenderLead() {
+    var lead = csLeadId ? LEAD_BY_ID[csLeadId] : null;
+    csEl("csLeadEmpty").hidden = !!lead;
+    csEl("csLead").hidden = !lead;
+    if (!lead) {
+      csEl("csScript").innerHTML = '<p class="cs-hint">A call script tailored to the lead appears here once you pick one.</p>';
+      csEl("csLeadHistory").innerHTML = '<li class="cell-sub">No lead selected.</li>';
+      return;
+    }
+    csEl("csLeadMeta").textContent = (COUNTRY_LABEL[lead.country] || lead.country) + " · signal " + lead.score;
+    csEl("csLeadName").textContent = lead.name;
+    csEl("csLeadSub").textContent = [
+      lead.type, lead.city + (lead.state ? ", " + lead.state : ""),
+      lead.reviews ? lead.reviews.toLocaleString() + " reviews" : "",
+      lead.rating ? lead.rating.toFixed(1) + " ★" : "",
+      lead.closes !== null ? "closes " + fmtClose(lead.closes) : ""
+    ].filter(Boolean).join(" · ");
+
+    var busy = !!(csSession && !csSession.ended);
+    var lines = csLinesFor(lead);
+    csEl("csLines").innerHTML = lines.length ? lines.map(function (ln, i) {
+      return '<button type="button" class="cs-line-btn' + (i === 0 ? " btn-primary" : "") + '" data-line="' + ln.id + '"' +
+        (busy ? " disabled" : "") + ">" +
+        "<strong>Call " + esc(ln.label) + "</strong><small>" + esc(ln.display) + "</small></button>";
+    }).join("") : '<p class="cs-hint">No diallable number for this lead.</p>';
+
+    var tz = csTzFor(lead);
+    if (tz) {
+      var bh = csBusinessHours(tz);
+      csEl("csHours").innerHTML = '<span class="cs-chip" data-tone="' + (bh.open ? "good" : "warn") + '">' +
+        (bh.open ? "Business hours" : "Outside business hours") + "</span>" +
+        '<span class="cs-hint">Their time: ' + esc(bh.parts.weekday + " " + bh.parts.label) + "</span>";
+    } else {
+      csEl("csHours").innerHTML = "";
+    }
+
+    csEl("csScript").innerHTML = csScriptFor(lead);
+
+    var hist = csLogsByLead()[lead.id] || [];
+    csEl("csLeadHistory").innerHTML = hist.length ? hist.slice(0, 8).map(function (g) {
+      return "<li><span class=\"num\">" + esc(csWhen(g.startedAt)) + "</span>" + csOutcomeChip(g.outcome) +
+        (g.talkSec ? ' <span class="cell-sub">' + csDur(g.talkSec) + " talk</span>" : "") +
+        (g.note ? '<div class="cell-sub">' + esc(g.note) + "</div>" : "") + "</li>";
+    }).join("") : '<li class="cell-sub">No calls to this lead yet.</li>';
+  }
+
+  function csRenderOutcomes() {
+    csEl("csOutcomes").innerHTML = CS_OUTCOMES.map(function (o) {
+      return '<button type="button" data-outcome="' + o.id + '" data-tone="' + (o.tone || "") + '" aria-pressed="' +
+        (csOutcome === o.id) + '">' + esc(o.label) + "</button>";
+    }).join("");
+    var def = csOutcomeDef(csOutcome);
+    csEl("csCallbackWrap").hidden = !(def && def.callback);
+    var live = !!(csSession && !csSession.ended);
+    var target = csLeadId || (csSession && csSession.line === "manual");
+    var canSave = !!def && !!target && !live;
+    csEl("csSave").disabled = !canSave;
+    csEl("csSaveNext").disabled = !canSave;
+  }
+
+  function csRenderCallUi() {
+    var s = csSession;
+    var phase = !s ? "idle" : s.phase;
+    var live = !!(s && !s.ended);
+    csEl("csCall").dataset.phase = phase;
+    var idleText = csConn === "ready" ? "Ready" : csConn === "demo" ? "Ready (demo)" : "Not connected";
+    csEl("csCallState").textContent = {
+      idle: idleText, connecting: "Connecting…", ringing: "Ringing", live: "Connected", ended: "Call ended"
+    }[phase];
+    csEl("csCallNumber").textContent = s ? s.display : "";
+    csEl("csMute").disabled = !(live && s.phase === "live");
+    csEl("csKeypadBtn").disabled = !(live && s.phase === "live");
+    csEl("csHangup").disabled = !live;
+    csEl("csMute").setAttribute("aria-pressed", String(!!(s && s.muted)));
+    csEl("csMute").textContent = s && s.muted ? "Unmute" : "Mute";
+    if (!(live && s.phase === "live")) {
+      csEl("csKeypad").hidden = true;
+      csEl("csKeypadBtn").setAttribute("aria-expanded", "false");
+    }
+    csEl("csManualCall").disabled = live;
+    document.querySelectorAll("#csLines button").forEach(function (b) { b.disabled = live; });
+    csTick();
+  }
+
+  function csRenderLog() {
+    var rows = csModeLogs().slice(0, 150);
+    csEl("csLogRows").innerHTML = rows.map(function (g) {
+      var lead = g.leadId ? LEAD_BY_ID[g.leadId] : null;
+      var name = lead ? lead.name : (g.manualNumber || "Removed lead");
+      return '<tr data-id="' + esc(lead ? g.leadId : "") + '">' +
+        '<td class="num">' + esc(csWhen(g.startedAt)) + "</td>" +
+        '<td><div class="cell-name">' + esc(name) + "</div>" +
+          (lead ? '<div class="cell-sub">' + esc(lead.city) + "</div>" : "") +
+          (g.manualNumber && lead ? '<div class="cell-sub num">' + esc(g.manualNumber) + "</div>" : "") + "</td>" +
+        "<td>" + esc(g.noDial ? "logged only" : g.line) + "</td>" +
+        '<td class="num">' + (g.noDial ? "—" : csDur(g.ringSec)) + "</td>" +
+        '<td class="num">' + (g.noDial ? "—" : csDur(g.talkSec)) + "</td>" +
+        "<td>" + csOutcomeChip(g.outcome) +
+          (g.callbackAt ? '<div class="cell-sub">back ' + esc(csWhen(g.callbackAt)) + "</div>" : "") + "</td>" +
+        '<td class="cs-log-note">' + esc(g.note || "") + "</td>" +
+        "<td>" + esc(g.caller || "") + "</td>" +
+        "</tr>";
+    }).join("");
+    csEl("csLogEmpty").hidden = rows.length > 0;
+  }
+
+  function csRenderSync() {
+    var el = csEl("csLogSync");
+    if (!el) return;
+    if (csSettings.demo) { el.textContent = "Demo calls stay on this device and never touch your pipeline"; return; }
+    var unsynced = csLogs.filter(function (g) { return !g.demo && !g.synced; }).length;
+    el.textContent = {
+      synced: unsynced ? unsynced + " call(s) waiting to sync" : "Synced to Supabase",
+      missing: "Saved on this device only — run supabase/call_log.sql to share it across devices",
+      offline: "Couldn't reach Supabase — unsynced calls will retry",
+      unknown: ""
+    }[csRemote];
+  }
+
+  function csRenderClock() {
+    var el = csEl("csClock");
+    if (!el) return;
+    var uk = csLocalParts("Europe/London");
+    var mine = new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
+    el.textContent = "UK " + uk.label + " · you " + mine;
+  }
+
+  function csRenderAll() {
+    csRenderConn();
+    csRenderKpis();
+    csRenderQueue();
+    csRenderLead();
+    csRenderOutcomes();
+    csRenderCallUi();
+    csRenderLog();
+    csRenderSync();
+    csRenderClock();
+  }
+
+  /* ---------- settings ---------- */
+
+  function csOpenSettings() {
+    csEl("csSetUrl").value = csSettings.backendUrl;
+    csEl("csSetPass").value = csSettings.passcode;
+    csEl("csSetPass").type = "password";
+    csEl("csSetShowPass").textContent = "Show";
+    csEl("csSetShowPass").setAttribute("aria-pressed", "false");
+    csEl("csSetCaller").value = csSettings.caller;
+    csEl("csSetDemo").checked = !!csSettings.demo;
+    csEl("csSetHours").checked = !!csSettings.hoursGuard;
+    csEl("csSetError").textContent = "";
+    var d = csEl("csSettings");
+    if (typeof d.showModal === "function") { if (!d.open) d.showModal(); }
+    else d.setAttribute("open", "");
+  }
+
+  function csCloseSettings() {
+    var d = csEl("csSettings");
+    if (typeof d.close === "function" && d.open) d.close();
+    else d.removeAttribute("open");
+  }
+
+  function csSaveSettings() {
+    var url = csEl("csSetUrl").value.trim().replace(/\/+$/, "");
+    var pass = csEl("csSetPass").value;
+    var demo = csEl("csSetDemo").checked;
+    if (url && !/^https:\/\/[^\s/]+/i.test(url) && !/^http:\/\/localhost(:\d+)?$/i.test(url)) {
+      csEl("csSetError").textContent = "The backend URL must start with https://";
+      return;
+    }
+    if (!demo && (!url || !pass)) {
+      csEl("csSetError").textContent = "Add the backend URL and passcode — or turn on Demo mode.";
+      return;
+    }
+    var reconnect = url !== csSettings.backendUrl || pass !== csSettings.passcode || demo !== !!csSettings.demo;
+    csSettings.backendUrl = url;
+    csSettings.passcode = pass;
+    csSettings.caller = csEl("csSetCaller").value.trim();
+    csSettings.demo = demo;
+    csSettings.hoursGuard = csEl("csSetHours").checked;
+    csSaveJson(CS_SETTINGS_KEY, csSettings);
+    csCloseSettings();
+    if (reconnect) {
+      if (csSession && !csSession.ended) toast("Settings saved — they apply after this call");
+      else {
+        csSession = null;
+        csOutcome = null;
+        csDisconnect();
+        csConnect();
+      }
+    }
+    csRenderAll();
+  }
+
+  /* ---------- tabs ---------- */
+
+  function csShowView(name) {
+    var calls = name === "calls";
+    csEl("viewLeads").hidden = calls;
+    csEl("viewCalls").hidden = !calls;
+    csEl("tabLeads").setAttribute("aria-selected", String(!calls));
+    csEl("tabCalls").setAttribute("aria-selected", String(calls));
+    csEl("tabLeads").tabIndex = calls ? -1 : 0;
+    csEl("tabCalls").tabIndex = calls ? 0 : -1;
+    document.querySelector(".region-picker").hidden = calls || countries.length <= 1;
+    csEl("exportBtn").hidden = calls;
+    try { history.replaceState(null, "", calls ? "#calls" : "#leads"); } catch (e) {}
+    if (calls) {
+      if (!csBooted) csBoot();
+      csRenderAll();
+    }
+  }
+
+  function csBoot() {
+    csBooted = true;
+    var countrySelect = csEl("csCountry");
+    countrySelect.innerHTML = '<option value="">All countries</option>' + countries.map(function (c) {
+      return '<option value="' + esc(c) + '">' + esc(COUNTRY_LABEL[c] || c) + "</option>";
+    }).join("");
+    if (countries.indexOf("UK") !== -1) countrySelect.value = "UK";   // calling market is the UK
+    fillSelect("csVertical", verticals, "All sectors");
+    csEl("csAutoDial").checked = !!csSettings.autoDial;
+    csLoadRemoteLogs();
+    setInterval(function () {
+      csRenderClock();
+      if (csLeadId && !csSession) csRenderLead();   // keep "their time" current
+    }, 30000);
+    if (csSettings.demo || (csSettings.backendUrl && csSettings.passcode)) csConnect();
+    else csSetConn("off", "");
+  }
+
+  /* ---------- call system events ---------- */
+
+  csEl("tabLeads").addEventListener("click", function () { csShowView("leads"); });
+  csEl("tabCalls").addEventListener("click", function () { csShowView("calls"); });
+  document.querySelector(".tabs").addEventListener("keydown", function (ev) {
+    if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
+    var toCalls = csEl("viewCalls").hidden;
+    csShowView(toCalls ? "calls" : "leads");
+    csEl(toCalls ? "tabCalls" : "tabLeads").focus();
+  });
+
+  var csQDebounce = null;
+  csEl("csQ").addEventListener("input", function () {
+    clearTimeout(csQDebounce);
+    csQDebounce = setTimeout(csRenderQueue, 180);
+  });
+  ["csCountry", "csVertical", "csBand", "csShow"].forEach(function (id) {
+    csEl(id).addEventListener("change", function () {
+      csRenderQueue();
+      csEl("csQueueList").scrollTop = 0;
+    });
+  });
+
+  function csPickFromQueue(ev) {
+    var li = ev.target.closest(".cs-q-item");
+    if (li) csSelectLead(li.dataset.id);
+  }
+  csEl("csQueueList").addEventListener("click", csPickFromQueue);
+  csEl("csQueueList").addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); csPickFromQueue(ev); }
+  });
+
+  csEl("csLines").addEventListener("click", function (ev) {
+    var btn = ev.target.closest("button[data-line]");
+    var lead = csLeadId ? LEAD_BY_ID[csLeadId] : null;
+    if (!btn || !lead) return;
+    var line = csLinesFor(lead).filter(function (ln) { return ln.id === btn.dataset.line; })[0];
+    if (line) csStartCall(line.number, { leadId: lead.id, line: line.id, display: line.display });
+  });
+
+  csEl("csHangup").addEventListener("click", csHangup);
+
+  csEl("csMute").addEventListener("click", function () {
+    if (!csSession || csSession.ended || !csCall) return;
+    csSession.muted = !csSession.muted;
+    csCall.mute(csSession.muted);
+    csRenderCallUi();
+  });
+
+  csEl("csKeypadBtn").addEventListener("click", function () {
+    var pad = csEl("csKeypad");
+    pad.hidden = !pad.hidden;
+    csEl("csKeypadBtn").setAttribute("aria-expanded", String(!pad.hidden));
+  });
+
+  function csSendDigit(d) {
+    if (!csCall || !csSession || csSession.phase !== "live") return;
+    csCall.sendDigits(d);
+    toast("Sent " + d);
+  }
+  csEl("csKeypad").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-digit]");
+    if (b) csSendDigit(b.dataset.digit);
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (csEl("csKeypad").hidden || !/^[0-9*#]$/.test(ev.key)) return;
+    var tag = (ev.target && ev.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    csSendDigit(ev.key);
+  });
+
+  csEl("csManualCall").addEventListener("click", function () {
+    var raw = csEl("csManualNum").value;
+    var n = csE164(raw);
+    if (!n) { toast("Enter the number in international format, e.g. +44 20 7946 0000"); return; }
+    csStartCall(n, { leadId: csLeadId, line: "manual", display: n });
+  });
+  csEl("csManualNum").addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter") { ev.preventDefault(); csEl("csManualCall").click(); }
+  });
+
+  csEl("csOutcomes").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-outcome]");
+    if (!b) return;
+    csOutcome = b.dataset.outcome;
+    var def = csOutcomeDef(csOutcome);
+    if (def && def.callback && !csEl("csCallbackAt").value) {
+      var tz = csTzFor(csLeadId ? LEAD_BY_ID[csLeadId] : null);
+      csEl("csCallbackAt").value = csToLocalInput(tz ? csNextBusinessMorning(tz) : Date.now() + 24 * 3600 * 1000);
+    }
+    csRenderCallbackTheirs();
+    csRenderOutcomes();
+  });
+
+  csEl("csCallbackAt").addEventListener("input", csRenderCallbackTheirs);
+  csEl("csSave").addEventListener("click", function () { csSaveOutcome(false); });
+  csEl("csSaveNext").addEventListener("click", function () { csSaveOutcome(true); });
+  csEl("csAutoCancel").addEventListener("click", csCancelAuto);
+  csEl("csAutoDial").addEventListener("change", function (ev) {
+    csSettings.autoDial = ev.target.checked;
+    csSaveJson(CS_SETTINGS_KEY, csSettings);
+    if (!ev.target.checked) csCancelAuto();
+  });
+
+  csEl("csOpenLead").addEventListener("click", function () {
+    var lead = csLeadId ? LEAD_BY_ID[csLeadId] : null;
+    if (lead) openDrawer(lead);
+  });
+
+  csEl("csLogRows").addEventListener("click", function (ev) {
+    var tr = ev.target.closest("tr[data-id]");
+    if (tr && tr.dataset.id && csSelectLead(tr.dataset.id)) {
+      document.querySelector(".cs-grid").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+
+  csEl("csExportLog").addEventListener("click", function () {
+    var head = ["started_at", "business", "city", "country", "line", "number", "ring_seconds", "talk_seconds",
+                "outcome", "callback_at", "note", "caller", "demo"];
+    var lines = [head.join(",")].concat(csModeLogs().map(function (g) {
+      var lead = g.leadId ? LEAD_BY_ID[g.leadId] : null;
+      var number = g.manualNumber || (lead ? (g.line === "mobile" ? "+" + lead.wa : lead.phone) : "");
+      var def = csOutcomeDef(g.outcome);
+      return [new Date(g.startedAt).toISOString(), lead ? lead.name : "", lead ? lead.city : "", lead ? lead.country : "",
+              g.line, number, g.ringSec, g.talkSec, def ? def.label : g.outcome,
+              g.callbackAt ? new Date(g.callbackAt).toISOString() : "", g.note || "", g.caller || "", g.demo ? "yes" : "no"]
+        .map(function (v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; })
+        .join(",");
+    }));
+    var csv = lines.join("\n");
+    var name = "call-log-" + new Date().toISOString().slice(0, 10) + ".csv";
+    try {
+      var url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      toast("Call log downloaded");
+    } catch (e) {
+      copy(csv, "Call log CSV");
+    }
+  });
+
+  csEl("csConnectBtn").addEventListener("click", function () {
+    if (csConn === "ready") { csDisconnect(); return; }
+    if (csConn === "demo") { csOpenSettings(); return; }
+    csConnect();
+  });
+  csEl("csSettingsBtn").addEventListener("click", csOpenSettings);
+  csEl("csSettingsForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    csSaveSettings();
+  });
+  csEl("csSetCancel").addEventListener("click", csCloseSettings);
+  csEl("csSetClose").addEventListener("click", csCloseSettings);
+  csEl("csSetShowPass").addEventListener("click", function () {
+    var input = csEl("csSetPass");
+    var show = input.type === "password";
+    input.type = show ? "text" : "password";
+    csEl("csSetShowPass").textContent = show ? "Hide" : "Show";
+    csEl("csSetShowPass").setAttribute("aria-pressed", String(show));
+  });
+  csEl("csSetForget").addEventListener("click", function () {
+    csSettings.passcode = "";
+    csSaveJson(CS_SETTINGS_KEY, csSettings);
+    csEl("csSetPass").value = "";
+    if (!csSettings.demo) csDisconnect();
+    toast("Passcode removed from this browser");
+  });
+
+  window.addEventListener("beforeunload", function (ev) {
+    if (csSession && (!csSession.ended || !csSession.saved)) {
+      ev.preventDefault();
+      ev.returnValue = "";
+    }
+  });
+
+  if (location.hash === "#calls") csShowView("calls");
 
   render();
   renderSaveState(saveNote);

@@ -26,3 +26,6 @@ raw_usa_run.log
 wa_redirect_run.log
 *.bak
 
+
+# Twilio backend dependencies (call-backend/)
+node_modules/
