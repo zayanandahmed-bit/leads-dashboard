@@ -338,6 +338,11 @@
     border: 1px solid var(--line);
     border-radius: var(--radius);
     overflow: hidden;
+    /* A flex item defaults to min-width:auto, which refuses to shrink
+       below the table's own intrinsic width (860px) — that stretched the
+       whole page wider than the viewport on mobile instead of letting
+       .table-scroll's own overflow-x handle it. This is the actual fix. */
+    min-width: 0;
   }
 
   .table-scroll { overflow-x: auto; }
@@ -617,6 +622,26 @@
 
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+  .pager {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 10px 0 4px;
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+  .pager button {
+    font: inherit;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .pager button:hover:not(:disabled) { border-color: var(--ink-muted); }
+  .pager button:disabled { opacity: .4; cursor: default; }
+
   .footnote {
     font-size: 12px;
     color: var(--ink-muted);
@@ -724,6 +749,12 @@
     </div>
     <div class="empty" id="empty" hidden>No leads match these filters.</div>
   </div>
+
+  <nav class="pager" id="pager" aria-label="Table pages" hidden>
+    <button type="button" id="pagerPrev">&larr; Prev</button>
+    <span id="pagerLabel"></span>
+    <button type="button" id="pagerNext">Next &rarr;</button>
+  </nav>
 
   <p class="footnote" id="footnote"></p>
 </div>
@@ -1038,6 +1069,7 @@
     resetFilterValues();
     refreshCityOptions();  // country reset to "All regions" — city list follows
     updateEyebrow();
+    page = 1;
     render();
   }
 
@@ -1139,8 +1171,19 @@
     }).join("");
   }
 
+  // Building 16,000+ <tr> elements in one innerHTML swap is what made the
+  // page slow — the browser has to parse, lay out and paint every row even
+  // though only ~15 fit on screen. Paint one page's worth at a time instead;
+  // KPIs and the count still reflect the FULL filtered list, only the table
+  // body is capped.
+  var PAGE_SIZE = 150;
+  var page = 1;
+
   function render() {
-    var list = filtered();
+    var full = filtered();
+    var totalPages = Math.max(1, Math.ceil(full.length / PAGE_SIZE));
+    if (page > totalPages) page = totalPages;
+    var list = full.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
     var tbody = document.getElementById("rows");
 
     tbody.innerHTML = list.map(function (l) {
@@ -1163,19 +1206,25 @@
         "</tr>";
     }).join("");
 
-    document.getElementById("empty").hidden = list.length > 0;
+    document.getElementById("empty").hidden = full.length > 0;
 
     // Make a filtered view unmistakable — otherwise a stale filter reads as
     // missing data.
-    var filtersOn = list.length !== LEADS.length || anyFilterSet();
+    var filtersOn = full.length !== LEADS.length || anyFilterSet();
     document.getElementById("clearBtn").hidden = !filtersOn;
     var countEl = document.getElementById("count");
     countEl.textContent = filtersOn
-      ? "Filtered — " + list.length + " of " + LEADS.length + " leads"
-      : list.length + " leads";
+      ? "Filtered — " + full.length + " of " + LEADS.length + " leads"
+      : full.length + " leads";
     countEl.classList.toggle("is-filtered", filtersOn);
 
-    renderKpis(list);
+    renderKpis(full);
+
+    var pager = document.getElementById("pager");
+    pager.hidden = totalPages <= 1;
+    document.getElementById("pagerLabel").textContent = "Page " + page + " of " + totalPages;
+    document.getElementById("pagerPrev").disabled = page <= 1;
+    document.getElementById("pagerNext").disabled = page >= totalPages;
 
     document.querySelectorAll("th.sortable").forEach(function (th) {
       var on = th.dataset.sort === sortKey;
@@ -1355,12 +1404,28 @@
   /* ---------- events ---------- */
 
   /* Wire from FILTER_IDS itself so a new filter can never be added without
-     also being listened to. `change` covers selects that don't emit `input`. */
+     also being listened to. `change` covers selects that don't emit `input`.
+     The free-text search fires on every keystroke — with 16,000+ leads that
+     means a full re-filter + re-render per character, which is what made
+     typing feel laggy. Debounce just that one input; selects already fire
+     once per choice, not per keystroke, so they stay instant. */
+  var searchDebounce = null;
   FILTER_IDS.forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener("input", render);
-    el.addEventListener("change", render);
+    var handler = function () {
+      page = 1; // any filter change invalidates whatever page we were on
+      render();
+    };
+    if (id === "q") {
+      el.addEventListener("input", function () {
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(handler, 180);
+      });
+    } else {
+      el.addEventListener("input", handler);
+      el.addEventListener("change", handler);
+    }
   });
 
   document.querySelectorAll("th.sortable").forEach(function (th) {
@@ -1368,12 +1433,20 @@
       var k = th.dataset.sort;
       if (sortKey === k) sortDir = -sortDir;
       else { sortKey = k; sortDir = (k === "name") ? 1 : -1; }
+      page = 1;
       render();
     }
     th.addEventListener("click", doSort);
     th.addEventListener("keydown", function (ev) {
       if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); doSort(); }
     });
+  });
+
+  document.getElementById("pagerPrev").addEventListener("click", function () {
+    if (page > 1) { page--; render(); document.querySelector(".table-scroll").scrollTop = 0; }
+  });
+  document.getElementById("pagerNext").addEventListener("click", function () {
+    page++; render(); document.querySelector(".table-scroll").scrollTop = 0;
   });
 
   document.getElementById("rows").addEventListener("click", function (ev) {
