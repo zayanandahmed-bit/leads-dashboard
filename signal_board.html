@@ -1636,6 +1636,12 @@
             <div class="empty" id="clPaymentsEmpty">No payments logged yet.</div>
 
             <div class="cs-filter-grid" style="grid-template-columns:1fr 1fr;margin-top:10px">
+              <label class="cs-field"><span>Type</span>
+                <select id="clPayType">
+                  <option value="monthly">Monthly payment</option>
+                  <option value="extra">Extra charge</option>
+                </select>
+              </label>
               <label class="cs-field"><span>Amount</span><input type="number" min="0" step="1" id="clPayAmount"></label>
               <label class="cs-field"><span>Date</span><input type="date" id="clPayDate"></label>
               <label class="cs-field"><span>Method</span>
@@ -1646,8 +1652,9 @@
                   <option>Other</option>
                 </select>
               </label>
-              <label class="cs-field"><span>Note</span><input type="text" id="clPayNote" placeholder="optional"></label>
+              <label class="cs-field" style="grid-column:1/-1"><span id="clPayNoteLabel">Note</span><input type="text" id="clPayNote" placeholder="optional"></label>
             </div>
+            <p class="cs-hint" id="clPeriodHint"></p>
             <p class="cs-error" id="clPayError" role="alert"></p>
             <button type="button" class="btn-primary" id="clLogPayment" style="align-self:flex-start">Log payment</button>
           </div>
@@ -4174,16 +4181,35 @@
     return d.getTime();
   }
 
+  // Only the regular monthly payments count toward "when are they paid up
+  // to" — an extra charge (a one-off fee on top of the plan) doesn't push
+  // the due date out, it's just money collected alongside it. A payment
+  // logged before this field existed has no `type` and counts as monthly,
+  // same as it always did.
+  function clIsMonthly(p) { return p.type !== "extra"; }
+
   function clLastPaidAt(c) {
-    if (!c.payments.length) return null;
-    return c.payments.reduce(function (max, p) { return Math.max(max, p.date); }, 0);
+    var monthly = c.payments.filter(clIsMonthly);
+    if (!monthly.length) return null;
+    return monthly.reduce(function (max, p) { return Math.max(max, p.date); }, 0);
   }
 
-  // A monthly client is due one month after their last payment (or one
-  // month after they signed up, if nothing's been logged yet).
+  // A monthly client is due one month after their last (monthly) payment,
+  // or one month after they signed up if nothing's been logged yet.
   function clNextDue(c) {
     var base = clLastPaidAt(c) || c.startedAt || Date.now();
     return clAddMonths(base, 1);
+  }
+
+  // True when a monthly payment dated `payDate` would double up on a period
+  // that's already covered — i.e. a monthly payment has already been logged
+  // and this date falls before what it already paid through. Backdating a
+  // catch-up payment, or dating one on/after the due date to pay ahead,
+  // both still go through; only "pay again for the period you just paid"
+  // is blocked, which is what turned into 5 duplicate rows for one client.
+  function clPeriodAlreadyPaid(c, payDate) {
+    var last = clLastPaidAt(c);
+    return last !== null && payDate < clNextDue(c);
   }
 
   function clDueTag(c) {
@@ -4203,7 +4229,7 @@
       monthly_fee: c.fee || 0, currency: c.currency || "USD", status: c.status || "active",
       started_at: new Date(c.startedAt || Date.now()).toISOString(), notes: c.notes || "",
       payments: c.payments.map(function (p) {
-        return { id: p.id, date: new Date(p.date).toISOString(), amount: p.amount, method: p.method || "", note: p.note || "" };
+        return { id: p.id, date: new Date(p.date).toISOString(), amount: p.amount, type: p.type || "monthly", method: p.method || "", note: p.note || "" };
       }),
       caller: csSettings.caller || "", updated_at: new Date(c.updatedAt || Date.now()).toISOString()
     };
@@ -4215,7 +4241,7 @@
       fee: Number(row.monthly_fee) || 0, currency: row.currency || "USD", status: row.status || "active",
       startedAt: new Date(row.started_at).getTime(), notes: row.notes || "",
       payments: (Array.isArray(row.payments) ? row.payments : []).map(function (p) {
-        return { id: p.id, date: new Date(p.date).getTime(), amount: Number(p.amount) || 0, method: p.method || "", note: p.note || "" };
+        return { id: p.id, date: new Date(p.date).getTime(), amount: Number(p.amount) || 0, type: p.type || "monthly", method: p.method || "", note: p.note || "" };
       }),
       updatedAt: new Date(row.updated_at).getTime()
     };
@@ -4378,16 +4404,33 @@
   function clRenderPayments(c) {
     var rows = c.payments.slice().sort(function (a, b) { return b.date - a.date; });
     clEl("clPaymentRows").innerHTML = rows.map(function (p) {
+      var methodCell = (clIsMonthly(p) ? "" : '<span class="cs-chip" data-tone="warn">Extra</span> ') + esc(p.method || "—");
       return '<tr><td class="num">' + esc(csWhen(p.date)) + '</td><td class="num">' + esc(clMoney(p.amount, c.currency)) +
-        "</td><td>" + esc(p.method || "—") + '</td><td class="cs-log-note">' + esc(p.note || "") + "</td>" +
+        "</td><td>" + methodCell + '</td><td class="cs-log-note">' + esc(p.note || "") + "</td>" +
         '<td><button type="button" class="cs-del" data-del="' + esc(p.id) + '" aria-label="Remove this payment" title="Remove this payment">&times;</button></td></tr>';
     }).join("");
     clEl("clPaymentsEmpty").hidden = rows.length > 0;
+    clEl("clPayType").value = "monthly";
     clEl("clPayAmount").value = c.fee || "";
     clEl("clPayDate").value = new Date().toISOString().slice(0, 10);
     clEl("clPayMethod").value = CL_METHODS[0];
     clEl("clPayNote").value = "";
     clEl("clPayError").textContent = "";
+    clRenderPeriodHint(c);
+  }
+
+  // Tells you up front whether this period's already covered, instead of
+  // only finding out after you hit Log payment.
+  function clRenderPeriodHint(c) {
+    var type = clEl("clPayType").value;
+    var hint = clEl("clPeriodHint"), label = clEl("clPayNoteLabel");
+    label.textContent = type === "extra" ? "What's it for" : "Note";
+    clEl("clPayNote").placeholder = type === "extra" ? "e.g. rush job, extra WhatsApp number set up" : "optional";
+    if (type === "extra") { hint.textContent = ""; return; }
+    var last = clLastPaidAt(c);
+    hint.textContent = last === null
+      ? "First monthly payment for this client."
+      : "Paid up to " + csWhen(clNextDue(c)) + " so far. A monthly payment dated before that is treated as a duplicate — switch to Extra charge, or backdate/forward-date it on purpose.";
   }
 
   function clRenderAll() {
@@ -4461,16 +4504,36 @@
     toast("Client deleted");
   }
 
+  // A stray double-click used to log the same payment twice (or five
+  // times) before the form could reset — guard the whole function, not
+  // just the button, so a second click mid-flight is dropped outright.
+  var clLoggingPayment = false;
+
   function clLogPayment() {
-    if (!clSelectedId) return;
+    if (clLoggingPayment || !clSelectedId) return;
     var c = clFind(clSelectedId);
     if (!c) return;
+    var type = clEl("clPayType").value === "extra" ? "extra" : "monthly";
     var amount = parseFloat(clEl("clPayAmount").value);
     if (!isFinite(amount) || amount <= 0) { clEl("clPayError").textContent = "Enter an amount greater than 0."; return; }
     var date = new Date(clEl("clPayDate").value).getTime();
     if (!isFinite(date)) date = Date.now();
+    if (type === "extra" && !clEl("clPayNote").value.trim()) {
+      clEl("clPayError").textContent = "Say what the extra charge is for.";
+      return;
+    }
+    // The actual fix for "5 duplicate payments": a monthly payment can't
+    // double up on a period that's already paid for. Extra charges are
+    // exempt — they're on top of the plan, not instead of it.
+    if (type === "monthly" && clPeriodAlreadyPaid(c, date)) {
+      clEl("clPayError").textContent = "Already paid up to " + csWhen(clNextDue(c)) +
+        " — this looks like a duplicate. Log it as an Extra charge instead, pick a later date, or remove the existing payment below if this was a mistake.";
+      return;
+    }
+    clLoggingPayment = true;
+    clEl("clPayError").textContent = "";
     c.payments.push({
-      id: csUuid(), date: date, amount: amount,
+      id: csUuid(), date: date, amount: amount, type: type,
       method: clEl("clPayMethod").value, note: clEl("clPayNote").value.trim()
     });
     c.updatedAt = Date.now();
@@ -4479,7 +4542,8 @@
     clRenderKpis();
     clRenderList();
     clRenderPayments(c);
-    toast("Payment logged");
+    toast(type === "extra" ? "Extra charge logged" : "Payment logged");
+    clLoggingPayment = false;
   }
 
   function clRemovePayment(paymentId) {
@@ -4502,6 +4566,15 @@
     clEl("clSave").addEventListener("click", clSave);
     clEl("clDeleteBtn").addEventListener("click", clDelete);
     clEl("clLogPayment").addEventListener("click", clLogPayment);
+    clEl("clPayType").addEventListener("change", function () {
+      var c = clSelectedId ? clFind(clSelectedId) : null;
+      if (!c) return;
+      // Extra charges are rarely the monthly fee amount — don't leave that
+      // prefilled where it'd be easy to submit by accident.
+      clEl("clPayAmount").value = clEl("clPayType").value === "extra" ? "" : (c.fee || "");
+      clEl("clPayError").textContent = "";
+      clRenderPeriodHint(c);
+    });
     var clQDebounce = null;
     clEl("clQ").addEventListener("input", function () { clearTimeout(clQDebounce); clQDebounce = setTimeout(clRenderList, 150); });
     clEl("clStatusFilter").addEventListener("change", clRenderList);
