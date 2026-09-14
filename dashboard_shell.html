@@ -720,11 +720,24 @@
 
   /* ---------- call system ---------- */
 
+  /* Every text-ish input outside the Leads toolbar (that one's handled by
+     the input[type="search"] rule above) — Call system, Cost calculator and
+     Clients all use plain <input>s of various types, and each type not
+     listed here falls back to the browser's plain white box instead of
+     matching the rest of the page. */
   #viewCalls input[type="tel"],
+  #viewCalls input[type="number"],
+  #viewCalls input[type="datetime-local"],
+  #viewCost input[type="text"],
+  #viewCost input[type="number"],
+  #viewClients input[type="text"],
+  #viewClients input[type="tel"],
+  #viewClients input[type="number"],
+  #viewClients input[type="email"],
+  #viewClients input[type="date"],
   .cs-dialog input[type="url"],
   .cs-dialog input[type="password"],
-  .cs-dialog input[type="text"],
-  #viewCalls input[type="datetime-local"] {
+  .cs-dialog input[type="text"] {
     font-family: var(--font-body);
     font-size: 13px;
     color: var(--ink);
@@ -736,7 +749,21 @@
     min-width: 0;
   }
 
+  /* date/datetime-local paint their calendar-picker glyph in whatever the
+     browser's default text color is — invisible on this dark-mode field. */
+  #viewCalls input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  #viewClients input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: var(--date-icon-filter, none);
+  }
+
+  :root[data-theme="dark"] { --date-icon-filter: invert(1); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --date-icon-filter: invert(1); }
+  }
+
   #viewCalls input:focus-visible,
+  #viewCost input:focus-visible,
+  #viewClients input:focus-visible,
   .cs-dialog input:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
