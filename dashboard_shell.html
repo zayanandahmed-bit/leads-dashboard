@@ -1553,8 +1553,11 @@
         <label class="cs-field"><span>Calls per day</span><input type="number" min="0" step="1" id="ccCallsPerDay" value="50"></label>
         <label class="cs-field"><span>Calling days per month</span><input type="number" min="0" step="1" id="ccDaysPerMonth" value="22"></label>
         <label class="cs-field"><span>Avg. minutes on the line per call</span><input type="number" min="0" step="0.5" id="ccMinutes" value="3"></label>
-        <label class="cs-field"><span>% of calls to mobiles</span><input type="number" min="0" max="100" step="5" id="ccMobilePct" value="49"></label>
+        <span></span>
+        <label class="cs-field"><span>% landline</span><input type="number" min="0" max="100" step="5" id="ccLandlinePct" value="51"></label>
+        <label class="cs-field"><span>% mobile</span><input type="number" min="0" max="100" step="5" id="ccMobilePct" value="49"></label>
       </div>
+      <p class="cs-hint" id="ccSplitHint"></p>
       <p class="cs-hint">
         "Minutes on the line" is ring time plus talk time &mdash; the browser leg bills from when you
         press Call, the UK leg only from when they answer. This estimate treats both as the same
@@ -3911,6 +3914,20 @@
     return "$" + n.toFixed(n < 1 ? 4 : 2);
   }
 
+  function ccClampPct(v) {
+    v = parseFloat(v);
+    if (!isFinite(v)) v = 0;
+    return Math.min(100, Math.max(0, v));
+  }
+
+  // The two split fields always add up to 100 — editing one sets the other,
+  // rather than letting them drift apart and leaving the split undefined.
+  function ccLinkSplit(editedId, otherId) {
+    var edited = ccClampPct(csEl(editedId).value);
+    csEl(editedId).value = edited;
+    csEl(otherId).value = 100 - edited;
+  }
+
   function ccRender() {
     ccSettings.browser = ccNum("ccBrowser", CC_DEFAULTS.browser);
     ccSettings.landline = ccNum("ccLandline", CC_DEFAULTS.landline);
@@ -3921,7 +3938,9 @@
     var callsPerDay = Math.max(0, parseInt(csEl("ccCallsPerDay").value, 10) || 0);
     var daysPerMonth = Math.max(0, parseInt(csEl("ccDaysPerMonth").value, 10) || 0);
     var minutes = Math.max(0, parseFloat(csEl("ccMinutes").value) || 0);
-    var mobilePct = Math.min(100, Math.max(0, parseFloat(csEl("ccMobilePct").value) || 0)) / 100;
+    var mobilePct = ccClampPct(csEl("ccMobilePct").value) / 100;
+    csEl("ccSplitHint").textContent = "Landline " + csEl("ccLandlinePct").value + "% + mobile " +
+      csEl("ccMobilePct").value + "% = " + (ccClampPct(csEl("ccLandlinePct").value) + ccClampPct(csEl("ccMobilePct").value)) + "%";
 
     var perCallLandline = ccPerCall(minutes, ccSettings.landline);
     var perCallMobile = ccPerCall(minutes, ccSettings.mobile);
@@ -3959,8 +3978,12 @@
     csEl("ccLandline").value = ccSettings.landline;
     csEl("ccMobile").value = ccSettings.mobile;
     csEl("ccRental").value = ccSettings.rental;
-    ["ccBrowser", "ccLandline", "ccMobile", "ccRental", "ccCallsPerDay", "ccDaysPerMonth", "ccMinutes", "ccMobilePct"]
+    ["ccBrowser", "ccLandline", "ccMobile", "ccRental", "ccCallsPerDay", "ccDaysPerMonth", "ccMinutes"]
       .forEach(function (id) { csEl(id).addEventListener("input", ccRender); });
+    // These two must adjust each other to keep summing to 100 BEFORE ccRender
+    // reads them, so each listener does the linking itself, then renders.
+    csEl("ccLandlinePct").addEventListener("input", function () { ccLinkSplit("ccLandlinePct", "ccMobilePct"); ccRender(); });
+    csEl("ccMobilePct").addEventListener("input", function () { ccLinkSplit("ccMobilePct", "ccLandlinePct"); ccRender(); });
     csEl("ccResetRates").addEventListener("click", function () {
       ccSettings = Object.assign({}, CC_DEFAULTS);
       csEl("ccBrowser").value = ccSettings.browser;
