@@ -14,9 +14,12 @@
  */
 const IDENTITY = "client:signalboard-caller";
 
-// UK premium-rate and personal-numbering ranges that cost the CALLER a lot
-// and are a classic fraud target. Blocked even though they start with +44.
-const BLOCKED_PREFIXES = ["+449", "+4470", "+44871", "+44872", "+44873"];
+// UK ranges that cost the CALLER a lot and are classic fraud targets, blocked
+// even though they start with +44: 09 premium rate, 070 personal numbering,
+// 076 pagers, 084/087 service-charge numbers.
+const BLOCKED_PREFIXES = ["+449", "+4470", "+4476", "+4484", "+4487"];
+// Isle of Man mobiles sit inside the 076 range and are ordinary mobiles.
+const BLOCK_EXCEPTIONS = ["+447624"];
 
 function list(value, fallback) {
   return String(value || fallback)
@@ -46,8 +49,13 @@ exports.handler = function (context, event, callback) {
   if (!allowed.some((p) => to.startsWith(p))) {
     return refuse("Calls to that country are not enabled.");
   }
-  if (BLOCKED_PREFIXES.some((p) => to.startsWith(p))) {
+  if (BLOCKED_PREFIXES.some((p) => to.startsWith(p)) && !BLOCK_EXCEPTIONS.some((p) => to.startsWith(p))) {
     return refuse("Premium rate numbers are blocked.");
+  }
+  // A UK number is +44 then 9 or 10 digits. Refuse anything else up front
+  // rather than paying for a call attempt that can't connect.
+  if (to.startsWith("+44") && !/^\+44\d{9,10}$/.test(to)) {
+    return refuse("That UK number has the wrong number of digits.");
   }
 
   const dial = twiml.dial({

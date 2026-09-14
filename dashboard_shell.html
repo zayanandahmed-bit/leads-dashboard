@@ -1,4 +1,7 @@
 <meta charset="utf-8">
+<!-- Without this, phones lay the page out 980px wide and shrink it to fit,
+     so none of the mobile layout rules ever applied on a real phone. -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Signal Board</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -162,7 +165,7 @@
     margin: 0 0 10px;
   }
 
-  .mast-actions { display: flex; gap: 8px; align-items: center; }
+  .mast-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
   .region-picker {
     display: flex;
@@ -999,6 +1002,7 @@
 
   .cs-timer { font-size: 42px; font-weight: 500; line-height: 1; letter-spacing: -.02em; }
   .cs-call-number { font-size: 13px; color: var(--ink-soft); min-height: 1.4em; }
+  .cs-quality { font-size: 12.5px; color: var(--prime); background: var(--prime-soft); padding: 4px 10px; border-radius: var(--radius); }
   .cs-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
   .cs-controls button { min-width: 88px; }
   #csMute[aria-pressed="true"] { background: var(--strong-soft); border-color: var(--strong); color: var(--strong); }
@@ -1201,6 +1205,12 @@
     .cs-dialog-foot { flex-wrap: wrap; }
   }
 
+  /* Two KPI columns on a phone: an odd last tile takes the full row
+     instead of leaving a blank grey cell beside it. */
+  @media (max-width: 480px) {
+    .kpis > .kpi:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  }
+
   @media (max-width: 640px) {
     .wrap { padding: 20px 14px 60px; }
     .facts { grid-template-columns: 1fr; }
@@ -1262,6 +1272,7 @@
     <select id="fWa" autocomplete="off" aria-label="Filter by WhatsApp reachability">
       <option value="">Any number</option>
       <option value="yes">WhatsApp reachable</option>
+      <option value="verified">WhatsApp verified</option>
       <option value="no">No WhatsApp</option>
     </select>
     <select id="fEmail" autocomplete="off" aria-label="Filter by email availability">
@@ -1429,6 +1440,7 @@
           <div class="cs-call-state" id="csCallState">Idle</div>
           <div class="cs-timer num" id="csTimer">0:00</div>
           <div class="cs-call-number num" id="csCallNumber"></div>
+          <div class="cs-quality" id="csQuality" role="status" hidden></div>
           <div class="cs-controls">
             <button type="button" id="csMute" aria-pressed="false" disabled>Mute</button>
             <button type="button" id="csHangup" class="btn-danger" disabled>Hang up</button>
@@ -1672,13 +1684,30 @@
     }, extra || {});
   }
 
+  // Supabase hands back at most 1,000 rows per request and says nothing
+  // about the rest — past 1,000 contacted leads, statuses would have gone
+  // missing. Read page by page until one comes back empty, stepping by
+  // however many rows actually arrived so any server cap works.
+  function supabaseGetAll(path) {
+    var out = [];
+    var sep = path.indexOf("?") === -1 ? "?" : "&";
+    function page(offset) {
+      return fetch(SUPABASE_URL + path + sep + "limit=1000&offset=" + offset, {
+        headers: supabaseHeaders()
+      }).then(function (r) {
+        if (!r.ok) { var err = new Error("supabase read " + r.status); err.status = r.status; throw err; }
+        return r.json();
+      }).then(function (rows) {
+        if (!rows.length || offset > 500000) return out;
+        out = out.concat(rows);
+        return page(offset + rows.length);
+      });
+    }
+    return page(0);
+  }
+
   function loadFromSupabase() {
-    return fetch(SUPABASE_URL + "/rest/v1/lead_status?select=id,status,note,updated_at", {
-      headers: supabaseHeaders()
-    }).then(function (r) {
-      if (!r.ok) throw new Error("supabase read " + r.status);
-      return r.json();
-    }).then(function (rows) {
+    return supabaseGetAll("/rest/v1/lead_status?select=id,status,note,updated_at&order=id").then(function (rows) {
       supabaseOk = true;
       var changed = false;
       rows.forEach(function (row) {
@@ -1689,7 +1718,13 @@
           changed = true;
         }
       });
-      if (changed) { render(); if (selected) openDrawer(selected); }
+      if (changed) {
+        // Keep a local copy too, so the next load (or a flaky connection)
+        // starts from the synced statuses, not from what this device last saw.
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(track)); } catch (e) {}
+        render();
+        if (selected) openDrawer(selected);
+      }
       return true;
     }).catch(function () {
       supabaseOk = false;
@@ -1697,19 +1732,36 @@
     });
   }
 
-  function pushToSupabase(id, e) {
+  // Every lead changed since the last push — not just the most recent one.
+  // Saving a call on one lead and then another inside the 2s debounce used
+  // to sync only the second, so the first never reached other devices.
+  var pendingSaveIds = {};
+
+  function pushToSupabase(ids, keepalive) {
+    var rows = ids.filter(function (id) { return track[id]; }).map(function (id) {
+      var e = track[id];
+      return { id: id, status: e.status, note: e.note || "",
+               updated_at: new Date(e.updatedAt || Date.now()).toISOString() };
+    });
+    if (!rows.length) return Promise.resolve(false);
+    // A failed push goes back in the queue and retries, rather than being
+    // silently dropped until the next edit.
+    var retry = function () {
+      ids.forEach(function (id) { pendingSaveIds[id] = true; });
+      if (!saveTimer && !keepalive) saveTimer = setTimeout(pushRemote, 30000);
+    };
     return fetch(SUPABASE_URL + "/rest/v1/lead_status", {
       method: "POST",
+      keepalive: !!keepalive,
       headers: supabaseHeaders({ "Prefer": "resolution=merge-duplicates,return=minimal" }),
-      body: JSON.stringify([{
-        id: id, status: e.status, note: e.note,
-        updated_at: new Date(e.updatedAt || Date.now()).toISOString()
-      }])
+      body: JSON.stringify(rows)
     }).then(function (r) {
       supabaseOk = r.ok;
+      if (!r.ok) retry();
       return r.ok;
     }).catch(function () {
       supabaseOk = false;
+      retry();
       return false;
     });
   }
@@ -1723,19 +1775,27 @@
     return (track[id] && track[id].status) || "new";
   }
 
-  var pendingSaveId = null;
-
   function persist(id) {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(track)); } catch (e) {}
     renderSaveState("Saving…");
-    if (id) pendingSaveId = id;
+    if (id) pendingSaveIds[id] = true;
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(pushRemote, 2200);
   }
 
+  // Closing the tab inside the 2s debounce used to lose that last change.
+  window.addEventListener("pagehide", function () {
+    var ids = Object.keys(pendingSaveIds);
+    if (!ids.length) return;
+    pendingSaveIds = {};
+    pushToSupabase(ids, true);
+  });
+
   function pushRemote() {
-    var id = pendingSaveId;
-    var supaPromise = id ? pushToSupabase(id, track[id]) : Promise.resolve(false);
+    saveTimer = null;
+    var ids = Object.keys(pendingSaveIds);
+    pendingSaveIds = {};
+    var supaPromise = ids.length ? pushToSupabase(ids) : Promise.resolve(false);
     var artifactPromise = artifactApi
       ? artifactApi.publish({ "data/track.json": JSON.stringify(track) }).then(function () { return true; }).catch(function (err) {
           var code = err && err.code;
@@ -1909,6 +1969,7 @@
     return LEADS.filter(function (l) {
       if (country && l.country !== country) return false;
       if (wa === "yes" && !isLive(l)) return false;
+      if (wa === "verified" && l.waSrc !== "verified" && l.waSrc !== "confirmed-wa.me") return false;
       if (wa === "no" && isLive(l)) return false;
       if (email === "yes" && !l.email) return false;
       if (email === "no" && l.email) return false;
@@ -1959,7 +2020,7 @@
     // via Evolution, most not) must never collapse the big real total down
     // to just the verified sliver: that reads as the number going wrong
     // when you change a filter, when nothing was actually wrong.
-    var waTile = { label: "On WhatsApp", value: reachable, cls: "is-accent" };
+    var waTile = { label: "On WhatsApp", value: reachable.toLocaleString(), cls: "is-accent" };
     if (verifiedCount && uncheckedLive) {
       waTile.note = verifiedCount.toLocaleString() + " confirmed, " + uncheckedLive.toLocaleString() + " unchecked";
     } else if (verifiedCount) {
@@ -1973,10 +2034,10 @@
     var tiles = [
       { label: "Leads", value: total.toLocaleString(), note: "in this view" },
       waTile,
-      { label: "Prime targets", value: prime, note: "score 75+", cls: "is-prime" },
-      { label: "Open past 7PM", value: lateOpen, note: "after-hours enquiry load" },
-      { label: "Contacted", value: touched, note: touched && total ? Math.round(touched / total * 100) + "% of list" : "none yet" },
-      { label: "Replied or won", value: replied, note: replied ? "keep these warm" : "no replies logged" }
+      { label: "Prime targets", value: prime.toLocaleString(), note: "score 75+", cls: "is-prime" },
+      { label: "Open past 7PM", value: lateOpen.toLocaleString(), note: "after-hours enquiry load" },
+      { label: "Contacted", value: touched.toLocaleString(), note: touched && total ? Math.round(touched / total * 100) + "% of list" : "none yet" },
+      { label: "Replied or won", value: replied.toLocaleString(), note: replied ? "keep these warm" : "no replies logged" }
     ];
 
     document.getElementById("kpis").innerHTML = tiles.map(function (t) {
@@ -2149,6 +2210,25 @@
         .catch(function () { toast("Copy blocked — select the text manually"); });
     } else {
       toast("Copy blocked — select the text manually");
+    }
+  }
+
+  // A real file wherever the page may download one (GitHub Pages). It used to
+  // put all 16,000 rows on the clipboard instead. The BOM makes Excel read
+  // accented business names correctly.
+  function downloadFile(name, text, label) {
+    try {
+      var url = URL.createObjectURL(new Blob(["\ufeff" + text], { type: "text/csv;charset=utf-8" }));
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      toast(label + " downloaded");
+    } catch (e) {
+      copy(text, label);
     }
   }
 
@@ -2367,7 +2447,7 @@
           .catch(function () { toast("Download declined"); });
       }).catch(function () { copy(csv, "CSV"); });
     } else {
-      copy(csv, "CSV");
+      downloadFile(name, csv, "CSV");
     }
   });
 
@@ -2391,7 +2471,8 @@
 
   // Mirrors the backend's refusals only so the UI can explain before dialling;
   // call-backend/functions/voice.protected.js is what actually enforces them.
-  var CS_BLOCKED = ["+449", "+4470", "+44871", "+44872", "+44873"];
+  var CS_BLOCKED = ["+449", "+4470", "+4476", "+4484", "+4487"];
+  var CS_BLOCK_EXCEPT = ["+447624"];   // Isle of Man mobiles share 076 with pagers
 
   var CS_OUTCOMES = [
     { id: "no_answer",      label: "No answer",        status: "contacted" },
@@ -2531,7 +2612,13 @@
   }
 
   function csBlocked(number) {
+    if (CS_BLOCK_EXCEPT.some(function (p) { return number.indexOf(p) === 0; })) return false;
     return CS_BLOCKED.some(function (p) { return number.indexOf(p) === 0; });
+  }
+
+  // A UK number is +44 and then 9 or 10 digits; anything else can't connect.
+  function csBadUkLength(number) {
+    return number.indexOf("+44") === 0 && !/^\+44\d{9,10}$/.test(number);
   }
 
   // Only numbers the backend will actually connect: a UK 070 "personal"
@@ -2539,10 +2626,10 @@
   function csLinesFor(lead) {
     var lines = [];
     var main = csE164(lead.phone);
-    if (main && !csBlocked(main)) lines.push({ id: "main", label: "main line", number: main, display: lead.phone });
+    if (main && !csBlocked(main) && !csBadUkLength(main)) lines.push({ id: "main", label: "main line", number: main, display: lead.phone });
     if (lead.wa) {
       var mob = "+" + lead.wa;
-      if (mob !== main && /^\+[1-9]\d{7,14}$/.test(mob) && !csBlocked(mob)) {
+      if (mob !== main && /^\+[1-9]\d{7,14}$/.test(mob) && !csBlocked(mob) && !csBadUkLength(mob)) {
         var onWa = lead.waSrc === "verified" || lead.waSrc === "confirmed-wa.me";
         lines.push({ id: "mobile", label: onWa ? "mobile (on WhatsApp)" : "mobile", number: mob, display: mob });
       }
@@ -2551,7 +2638,8 @@
   }
 
   function csCanDial(number) {
-    if (csBlocked(number)) return "Premium-rate numbers are blocked.";
+    if (csBlocked(number)) return "Premium-rate, service and pager numbers are blocked.";
+    if (csBadUkLength(number)) return "That UK number has the wrong number of digits.";
     if (!csSettings.demo && csTokenInfo && Array.isArray(csTokenInfo.allowedPrefixes)) {
       var ok = csTokenInfo.allowedPrefixes.some(function (p) { return number.indexOf(p) === 0; });
       if (!ok) return "Your backend only allows " + csTokenInfo.allowedPrefixes.join(", ") +
@@ -2697,12 +2785,9 @@
   }
 
   function csLoadRemoteLogs() {
-    return fetch(SUPABASE_URL + "/rest/v1/call_log?select=*&order=started_at.desc&limit=" + CS_LOG_CAP, {
-      headers: supabaseHeaders()
-    }).then(function (r) {
-      if (r.status === 404) { csRemote = "missing"; return null; }
-      if (!r.ok) throw new Error("call_log read " + r.status);
-      return r.json();
+    return supabaseGetAll("/rest/v1/call_log?select=*&order=started_at.desc,id").catch(function (err) {
+      if (err && err.status === 404) { csRemote = "missing"; return null; }
+      throw err;
     }).then(function (rows) {
       if (!rows) { csRenderSync(); return; }
       csRemote = "synced";
@@ -2749,12 +2834,18 @@
     // Form-encoded on purpose: a JSON body would trigger a CORS preflight,
     // which a Twilio Function can't answer. This stays a "simple" request.
     var body = new URLSearchParams({ passcode: csSettings.passcode });
-    return fetch(url, { method: "POST", body: body }).then(function (r) {
+    // A backend that never answers must not leave "Connecting…" up forever.
+    var ctrl = typeof AbortController === "function" ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 15000) : null;
+    return fetch(url, { method: "POST", body: body, signal: ctrl ? ctrl.signal : undefined }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (data) {
+        clearTimeout(timer);
         if (!r.ok || !data.token) throw new Error(data.error || ("Backend returned " + r.status));
         return data;
       });
-    }, function () {
+    }, function (err) {
+      clearTimeout(timer);
+      if (err && err.name === "AbortError") throw new Error("The backend didn't answer within 15 seconds — check the URL and try again.");
       throw new Error("Couldn't reach the backend — check the URL, and that this site is in ALLOWED_ORIGINS.");
     });
   }
@@ -2865,10 +2956,33 @@
       call.on("cancel", function () { csEnded(session); });
       call.on("reject", function () { csEnded(session); });
       call.on("error", function (err) { toast("Call problem: " + csErrText(err)); });
+      // Calling the UK over home internet: say when the line is breaking up,
+      // instead of leaving you wondering why they can't hear you.
+      call.on("warning", function (name) { csQuality(session, name, true); });
+      call.on("warning-cleared", function (name) { csQuality(session, name, false); });
+      call.on("reconnecting", function () { csQuality(session, "reconnecting", true); });
+      call.on("reconnected", function () { csQuality(session, "reconnecting", false); });
     }).catch(function (err) {
       toast("Couldn't place the call: " + csErrText(err));
       csEnded(session);
     });
+  }
+
+  var CS_QUALITY_TEXT = {
+    "high-rtt": "Delay on the line — leave a beat before you reply.",
+    "high-jitter": "Your internet is unsteady — they may hear you breaking up.",
+    "high-packet-loss": "Your internet is dropping audio — they may hear you breaking up.",
+    "low-mos": "Call quality is poor — move closer to your Wi-Fi or close other downloads.",
+    "constant-audio-input-level": "No sound from your microphone — check it isn't muted or unplugged.",
+    "reconnecting": "Connection dropped — reconnecting…"
+  };
+
+  function csQuality(session, name, on) {
+    if (csSession !== session || !CS_QUALITY_TEXT[name]) return;
+    session.warnings = session.warnings || {};
+    if (on) session.warnings[name] = true;
+    else delete session.warnings[name];
+    csRenderCallUi();
   }
 
   function csDemoDial(session) {
@@ -3597,6 +3711,11 @@
       idle: idleText, connecting: "Connecting…", ringing: "Ringing", live: "Connected", ended: "Call ended"
     }[phase];
     csEl("csCallNumber").textContent = s ? s.display : "";
+    var warns = live && s.warnings ? Object.keys(s.warnings).filter(function (n) {
+      return !(s.muted && n === "constant-audio-input-level");   // silence is expected on mute
+    }) : [];
+    csEl("csQuality").hidden = !warns.length;
+    csEl("csQuality").textContent = warns.length ? CS_QUALITY_TEXT[warns[warns.length - 1]] : "";
     csEl("csMute").disabled = !(live && s.phase === "live");
     csEl("csHangup").disabled = !live;
     csEl("csMute").setAttribute("aria-pressed", String(!!(s && s.muted)));
@@ -3754,6 +3873,8 @@
     setInterval(function () {
       csRenderClock();
       if (csLeadId && !csSession) csRenderLead();   // keep "their time" current
+      // Offices open and close while you work the list.
+      if (csEl("csOpenNow").checked && !csSession && !csEl("viewCalls").hidden) csRenderQueue();
     }, 30000);
     if (csSettings.demo || (csSettings.backendUrl && csSettings.passcode)) csConnect();
     else csSetConn("off", "");
@@ -3957,19 +4078,7 @@
     }));
     var csv = lines.join("\n");
     var name = "call-log-" + new Date().toISOString().slice(0, 10) + ".csv";
-    try {
-      var url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-      var a = document.createElement("a");
-      a.href = url;
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-      toast("Call log downloaded");
-    } catch (e) {
-      copy(csv, "Call log CSV");
-    }
+    downloadFile(name, csv, "Call log");
   });
 
   csEl("csConnectBtn").addEventListener("click", function () {
@@ -4007,6 +4116,12 @@
   });
 
   if (location.hash === "#calls") csShowView("calls");
+  // A #calls / #leads link opened while the page is already up (or Back
+  // and Forward) switches tab too, instead of doing nothing.
+  window.addEventListener("hashchange", function () {
+    var want = location.hash === "#calls" ? "calls" : "leads";
+    if ((want === "calls") === csEl("viewCalls").hidden) csShowView(want);
+  });
 
   render();
   renderSaveState(saveNote);
