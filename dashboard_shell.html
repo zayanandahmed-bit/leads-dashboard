@@ -1197,8 +1197,13 @@
     .cs-outcome { grid-column: 1 / -1; }
   }
 
+  /* Clients tab: list + detail panel, same two-column shape as the call
+     system's narrower breakpoint, collapsing the same way on phones. */
+  .cl-grid { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 16px; align-items: start; }
+
   @media (max-width: 760px) {
     .cs-grid { grid-template-columns: minmax(0, 1fr); }
+    .cl-grid { grid-template-columns: minmax(0, 1fr); }
     .cs-queue-list { max-height: 320px; }
     .cs-timer { font-size: 34px; }
     .cs-lead-head { flex-direction: column; }
@@ -1243,6 +1248,7 @@
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button type="button" role="tab" id="tabLeads" aria-selected="true" aria-controls="viewLeads">Leads</button>
     <button type="button" role="tab" id="tabCalls" aria-selected="false" aria-controls="viewCalls" tabindex="-1">Call system <span class="cs-dot" id="tabDot" data-state="off" aria-hidden="true"></span></button>
+    <button type="button" role="tab" id="tabClients" aria-selected="false" aria-controls="viewClients" tabindex="-1">Clients</button>
     <button type="button" role="tab" id="tabCost" aria-selected="false" aria-controls="viewCost" tabindex="-1">Cost calculator</button>
   </nav>
 
@@ -1527,6 +1533,100 @@
       </div>
       <div class="empty" id="csLogEmpty">No calls logged yet.</div>
     </section>
+  </div>
+
+  <div id="viewClients" class="view" role="tabpanel" aria-labelledby="tabClients" hidden>
+    <section class="kpis" id="clKpis" aria-label="Client summary"></section>
+
+    <div class="cl-grid">
+      <section class="cs-panel" aria-label="Client list">
+        <div class="cs-panel-head">
+          <h2>Clients</h2>
+          <span class="cs-count num" id="clCount"></span>
+        </div>
+        <input type="search" id="clQ" autocomplete="off" placeholder="Search clients&hellip;" aria-label="Search clients">
+        <select id="clStatusFilter" autocomplete="off" aria-label="Filter by status">
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="paused">Paused</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <button type="button" class="btn-primary" id="clNewBtn" style="width:100%">+ New client</button>
+        <ol class="cs-queue-list" id="clList" style="max-height:520px"></ol>
+        <div class="empty" id="clListEmpty" hidden>No clients match.</div>
+        <p class="cs-hint" id="clSyncHint"></p>
+      </section>
+
+      <section class="cs-panel" aria-label="Client details">
+        <div class="cs-lead-empty" id="clEmpty">Pick a client from the list, or add a new one.</div>
+        <div id="clForm" hidden>
+          <div class="cs-lead-head">
+            <div class="cs-lead-title">
+              <p class="eyebrow" id="clFormEyebrow">New client</p>
+              <h2 id="clFormTitle">New client</h2>
+            </div>
+            <button type="button" class="cs-link-danger" id="clDeleteBtn" hidden>Delete client</button>
+          </div>
+          <div class="cs-filter-grid" style="grid-template-columns:1fr 1fr">
+            <label class="cs-field"><span>Business name</span><input type="text" id="clName" maxlength="120"></label>
+            <label class="cs-field"><span>Status</span>
+              <select id="clStatus">
+                <option value="active">Active</option>
+                <option value="paused">Paused</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+            <label class="cs-field"><span>Phone</span><input type="tel" id="clPhone"></label>
+            <label class="cs-field"><span>WhatsApp</span><input type="tel" id="clWa"></label>
+            <label class="cs-field" style="grid-column:1/-1"><span>Email</span><input type="email" id="clEmail"></label>
+            <label class="cs-field"><span>Monthly fee</span><input type="number" min="0" step="1" id="clFee"></label>
+            <label class="cs-field"><span>Currency</span>
+              <select id="clCurrency">
+                <option value="USD">USD $</option>
+                <option value="GBP">GBP £</option>
+                <option value="EUR">EUR €</option>
+                <option value="AED">AED</option>
+                <option value="PKR">PKR</option>
+              </select>
+            </label>
+            <label class="cs-field"><span>Client since</span><input type="date" id="clStarted"></label>
+          </div>
+          <label class="cs-field"><span>Notes</span><textarea id="clNotes" placeholder="What they get, who to contact, anything to remember&hellip;"></textarea></label>
+          <p class="cs-error" id="clError" role="alert"></p>
+          <div class="cs-save-row">
+            <span></span>
+            <button type="button" class="btn-primary" id="clSave">Save client</button>
+          </div>
+
+          <div class="cs-history" id="clPaymentsWrap" hidden>
+            <p class="section-label">Payments</p>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Notes</th><th aria-label="Remove payment"></th></tr></thead>
+                <tbody id="clPaymentRows"></tbody>
+              </table>
+            </div>
+            <div class="empty" id="clPaymentsEmpty">No payments logged yet.</div>
+
+            <div class="cs-filter-grid" style="grid-template-columns:1fr 1fr;margin-top:10px">
+              <label class="cs-field"><span>Amount</span><input type="number" min="0" step="1" id="clPayAmount"></label>
+              <label class="cs-field"><span>Date</span><input type="date" id="clPayDate"></label>
+              <label class="cs-field"><span>Method</span>
+                <select id="clPayMethod">
+                  <option>Bank transfer</option>
+                  <option>Card</option>
+                  <option>Cash</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label class="cs-field"><span>Note</span><input type="text" id="clPayNote" placeholder="optional"></label>
+            </div>
+            <p class="cs-error" id="clPayError" role="alert"></p>
+            <button type="button" class="btn-primary" id="clLogPayment" style="align-self:flex-start">Log payment</button>
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 
   <div id="viewCost" class="view" role="tabpanel" aria-labelledby="tabCost" hidden>
@@ -3995,21 +4095,426 @@
     ccRender();
   }
 
+  /* ================================================================
+     Clients — your paying, monthly clients, separate from the scraped
+     lead pipeline. Synced the same way as lead_status: a full row per
+     client, upserted on save, so it's shared across devices.
+     ================================================================ */
+
+  var CL_KEY = "signalboard.clients.v1";
+  var CL_DELETED_KEY = "signalboard.clients.deleted.v1";
+  var CL_SYMBOL = { USD: "$", GBP: "£", EUR: "€", AED: "AED ", PKR: "PKR " };
+  var CL_METHODS = ["Bank transfer", "Card", "Cash", "Other"];
+
+  var clClients = csLoadJson(CL_KEY, []);
+  if (!Array.isArray(clClients)) clClients = [];
+  var clDeleted = csLoadJson(CL_DELETED_KEY, []);
+  if (!Array.isArray(clDeleted)) clDeleted = [];
+
+  var clBooted = false;
+  var clSelectedId = null;    // null while the form is showing an unsaved new client
+  var clRemote = "unknown";   // unknown | synced | missing | offline
+
+  function clPersist() { csSaveJson(CL_KEY, clClients); }
+
+  function clFind(id) {
+    for (var i = 0; i < clClients.length; i++) if (clClients[i].id === id) return clClients[i];
+    return null;
+  }
+
+  function clMoney(amount, currency) {
+    var sym = CL_SYMBOL[currency] || (currency ? currency + " " : "$");
+    return sym + (Math.round((amount || 0) * 100) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // Sums grouped by currency, formatted as "$1,200 · £300" — clients on
+  // different currencies stay legible instead of being added together.
+  function clSumByCurrency(list, amountOf, currencyOf) {
+    var sums = {}, order = [];
+    list.forEach(function (x) {
+      var c = currencyOf(x) || "USD", a = amountOf(x);
+      if (!a) return;
+      if (!(c in sums)) { sums[c] = 0; order.push(c); }
+      sums[c] += a;
+    });
+    if (!order.length) return "—";
+    return order.map(function (c) { return clMoney(sums[c], c); }).join(" · ");
+  }
+
+  function clAddMonths(ms, n) {
+    var d = new Date(ms);
+    d.setMonth(d.getMonth() + n);
+    return d.getTime();
+  }
+
+  function clLastPaidAt(c) {
+    if (!c.payments.length) return null;
+    return c.payments.reduce(function (max, p) { return Math.max(max, p.date); }, 0);
+  }
+
+  // A monthly client is due one month after their last payment (or one
+  // month after they signed up, if nothing's been logged yet).
+  function clNextDue(c) {
+    var base = clLastPaidAt(c) || c.startedAt || Date.now();
+    return clAddMonths(base, 1);
+  }
+
+  function clDueTag(c) {
+    if (c.status !== "active") return null;
+    var due = clNextDue(c);
+    var days = Math.round((due - Date.now()) / 86400000);
+    if (days < 0) return { tone: "bad", text: Math.abs(days) + "d overdue" };
+    if (days <= 5) return { tone: "warn", text: days === 0 ? "due today" : "due in " + days + "d" };
+    return { tone: "good", text: "due " + csWhen(due) };
+  }
+
+  /* ---------- Supabase sync ---------- */
+
+  function clRowFromClient(c) {
+    return {
+      id: c.id, name: c.name, phone: c.phone || "", whatsapp: c.wa || "", email: c.email || "",
+      monthly_fee: c.fee || 0, currency: c.currency || "USD", status: c.status || "active",
+      started_at: new Date(c.startedAt || Date.now()).toISOString(), notes: c.notes || "",
+      payments: c.payments.map(function (p) {
+        return { id: p.id, date: new Date(p.date).toISOString(), amount: p.amount, method: p.method || "", note: p.note || "" };
+      }),
+      caller: csSettings.caller || "", updated_at: new Date(c.updatedAt || Date.now()).toISOString()
+    };
+  }
+
+  function clClientFromRow(row) {
+    return {
+      id: row.id, name: row.name, phone: row.phone || "", wa: row.whatsapp || "", email: row.email || "",
+      fee: Number(row.monthly_fee) || 0, currency: row.currency || "USD", status: row.status || "active",
+      startedAt: new Date(row.started_at).getTime(), notes: row.notes || "",
+      payments: (Array.isArray(row.payments) ? row.payments : []).map(function (p) {
+        return { id: p.id, date: new Date(p.date).getTime(), amount: Number(p.amount) || 0, method: p.method || "", note: p.note || "" };
+      }),
+      updatedAt: new Date(row.updated_at).getTime()
+    };
+  }
+
+  function clPushClient(c) {
+    return fetch(SUPABASE_URL + "/rest/v1/clients", {
+      method: "POST",
+      headers: supabaseHeaders({ "Prefer": "resolution=merge-duplicates,return=minimal" }),
+      body: JSON.stringify([clRowFromClient(c)])
+    }).then(function (r) {
+      if (r.status === 404) clRemote = "missing";
+      else clRemote = r.ok ? "synced" : "offline";
+      clRenderSync();
+      return r.ok;
+    }).catch(function () { clRemote = "offline"; clRenderSync(); return false; });
+  }
+
+  function clDeleteRemote(id) {
+    return fetch(SUPABASE_URL + "/rest/v1/clients?id=eq." + encodeURIComponent(id), {
+      method: "DELETE",
+      headers: supabaseHeaders({ "Prefer": "return=minimal" })
+    }).catch(function () {});
+  }
+
+  function clLoadRemote() {
+    return supabaseGetAll("/rest/v1/clients?select=*&order=name").catch(function (err) {
+      if (err && err.status === 404) { clRemote = "missing"; return null; }
+      throw err;
+    }).then(function (rows) {
+      if (!rows) { clRenderSync(); return; }
+      clRemote = "synced";
+      var have = {};
+      clClients.forEach(function (c) { have[c.id] = c; });
+      rows.forEach(function (row) {
+        if (clDeleted.indexOf(row.id) !== -1) { clDeleteRemote(row.id); return; }
+        var mine = have[row.id];
+        var remoteUpdated = new Date(row.updated_at).getTime();
+        if (!mine || remoteUpdated > (mine.updatedAt || 0)) {
+          var next = clClientFromRow(row);
+          if (mine) { var i = clClients.indexOf(mine); clClients[i] = next; } else clClients.push(next);
+          have[row.id] = next;
+        }
+      });
+      clPersist();
+      clRenderAll();
+    }).catch(function () { clRemote = "offline"; clRenderSync(); });
+  }
+
+  /* ---------- rendering ---------- */
+
+  function clRenderSync() {
+    var el = clEl("clSyncHint");
+    if (!el) return;
+    el.textContent = {
+      synced: "Synced to Supabase", missing: "Saved on this device only — run supabase/clients.sql to share it across devices",
+      offline: "Couldn't reach Supabase — saved on this device, will retry", unknown: ""
+    }[clRemote];
+  }
+
+  function clEl(id) { return document.getElementById(id); }
+
+  function clFiltered() {
+    var q = clEl("clQ").value.trim().toLowerCase();
+    var status = clEl("clStatusFilter").value;
+    return clClients.filter(function (c) {
+      if (status && c.status !== status) return false;
+      if (q && (c.name + " " + c.phone + " " + c.email).toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    }).sort(function (a, b) {
+      var da = a.status === "active" ? Math.round((clNextDue(a) - Date.now()) / 86400000) : 99999;
+      var db = b.status === "active" ? Math.round((clNextDue(b) - Date.now()) / 86400000) : 99999;
+      var ra = a.status === "active" ? 0 : a.status === "paused" ? 1 : 2;
+      var rb = b.status === "active" ? 0 : b.status === "paused" ? 1 : 2;
+      if (ra !== rb) return ra - rb;
+      if (da !== db) return da - db;   // most overdue (most negative) first
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  function clRenderKpis() {
+    var active = clClients.filter(function (c) { return c.status === "active"; });
+    var overdue = active.filter(function (c) { var t = clDueTag(c); return t && t.tone === "bad"; });
+    var now = new Date();
+    var thisMonth = [];
+    clClients.forEach(function (c) {
+      c.payments.forEach(function (p) {
+        var d = new Date(p.date);
+        if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) thisMonth.push({ amount: p.amount, currency: c.currency });
+      });
+    });
+    var allTimeTotal = 0;
+    clClients.forEach(function (c) { c.payments.forEach(function (p) { if ((c.currency || "USD") === "USD") allTimeTotal += p.amount; }); });
+
+    var tiles = [
+      { label: "Active clients", value: active.length, note: clClients.length - active.length + " paused/cancelled" },
+      { label: "MRR", value: clSumByCurrency(active, function (c) { return c.fee; }, function (c) { return c.currency; }), note: "active clients' monthly fees", cls: "is-accent" },
+      { label: "Collected this month", value: clSumByCurrency(thisMonth, function (p) { return p.amount; }, function (p) { return p.currency; }), note: thisMonth.length + " payment(s) logged", cls: "is-prime" },
+      { label: "Overdue", value: overdue.length, note: overdue.length ? "past their monthly due date" : "everyone's paid up" }
+    ];
+    clEl("clKpis").innerHTML = tiles.map(function (t) {
+      return '<div class="kpi">' +
+        '<span class="kpi-label">' + esc(t.label) + "</span>" +
+        '<span class="kpi-value ' + (t.cls || "") + '">' + esc(t.value) + "</span>" +
+        '<span class="kpi-note">' + esc(t.note) + "</span>" +
+        "</div>";
+    }).join("");
+  }
+
+  function clRenderList() {
+    var list = clFiltered();
+    clEl("clCount").textContent = list.length.toLocaleString() + (list.length === 1 ? " client" : " clients");
+    clEl("clList").innerHTML = list.map(function (c) {
+      var tag = c.status !== "active"
+        ? '<span class="cs-chip">' + esc(c.status) + "</span>"
+        : (function () { var t = clDueTag(c); return t ? '<span class="cs-chip" data-tone="' + t.tone + '">' + esc(t.text) + "</span>" : ""; })();
+      return '<li class="cs-q-item" data-id="' + esc(c.id) + '" aria-current="' + (c.id === clSelectedId) + '" tabindex="0">' +
+        '<span class="cs-q-name">' + esc(c.name) + "</span>" +
+        '<span class="cs-q-score">' + esc(clMoney(c.fee, c.currency)) + "/mo</span>" +
+        '<span class="cs-q-sub">' + esc(c.phone || c.email || "no contact on file") + "</span>" +
+        '<span class="cs-q-tags">' + tag + "</span>" +
+        "</li>";
+    }).join("");
+    clEl("clListEmpty").hidden = list.length > 0;
+  }
+
+  function clClearForm() {
+    ["clName", "clPhone", "clWa", "clEmail", "clFee", "clNotes"].forEach(function (id) { clEl(id).value = ""; });
+    clEl("clStatus").value = "active";
+    clEl("clCurrency").value = "USD";
+    clEl("clStarted").value = new Date().toISOString().slice(0, 10);
+    clEl("clError").textContent = "";
+  }
+
+  function clRenderForm() {
+    var c = clSelectedId ? clFind(clSelectedId) : null;
+    clEl("clEmpty").hidden = true;
+    clEl("clForm").hidden = false;
+    clEl("clFormEyebrow").textContent = c ? "Client since " + csWhen(c.startedAt) : "";
+    clEl("clFormTitle").textContent = c ? c.name : "New client";
+    clEl("clDeleteBtn").hidden = !c;
+    clEl("clPaymentsWrap").hidden = !c;
+    if (c) {
+      clEl("clName").value = c.name;
+      clEl("clStatus").value = c.status;
+      clEl("clPhone").value = c.phone;
+      clEl("clWa").value = c.wa;
+      clEl("clEmail").value = c.email;
+      clEl("clFee").value = c.fee;
+      clEl("clCurrency").value = c.currency;
+      clEl("clStarted").value = new Date(c.startedAt).toISOString().slice(0, 10);
+      clEl("clNotes").value = c.notes;
+      clEl("clError").textContent = "";
+      clRenderPayments(c);
+    } else {
+      clClearForm();
+    }
+  }
+
+  function clRenderPayments(c) {
+    var rows = c.payments.slice().sort(function (a, b) { return b.date - a.date; });
+    clEl("clPaymentRows").innerHTML = rows.map(function (p) {
+      return '<tr><td class="num">' + esc(csWhen(p.date)) + '</td><td class="num">' + esc(clMoney(p.amount, c.currency)) +
+        "</td><td>" + esc(p.method || "—") + '</td><td class="cs-log-note">' + esc(p.note || "") + "</td>" +
+        '<td><button type="button" class="cs-del" data-del="' + esc(p.id) + '" aria-label="Remove this payment" title="Remove this payment">&times;</button></td></tr>';
+    }).join("");
+    clEl("clPaymentsEmpty").hidden = rows.length > 0;
+    clEl("clPayAmount").value = c.fee || "";
+    clEl("clPayDate").value = new Date().toISOString().slice(0, 10);
+    clEl("clPayMethod").value = CL_METHODS[0];
+    clEl("clPayNote").value = "";
+    clEl("clPayError").textContent = "";
+  }
+
+  function clRenderAll() {
+    clRenderKpis();
+    clRenderList();
+    clRenderSync();
+    if (!clEl("clForm").hidden) clRenderForm();
+  }
+
+  /* ---------- actions ---------- */
+
+  function clSelect(id) {
+    clSelectedId = id;
+    clRenderList();
+    clRenderForm();
+  }
+
+  function clNew() {
+    clSelectedId = null;
+    clEl("clEmpty").hidden = true;
+    clEl("clForm").hidden = false;
+    clRenderList();
+    clRenderForm();
+    clEl("clName").focus();
+  }
+
+  function clSave() {
+    var name = clEl("clName").value.trim();
+    if (!name) { clEl("clError").textContent = "Give the client a name."; clEl("clName").focus(); return; }
+    var fee = parseFloat(clEl("clFee").value);
+    if (!isFinite(fee) || fee < 0) fee = 0;
+    var started = new Date(clEl("clStarted").value).getTime();
+    if (!isFinite(started)) started = Date.now();
+
+    var existing = clSelectedId ? clFind(clSelectedId) : null;
+    var c = {
+      id: existing ? existing.id : csUuid(),
+      name: name, phone: clEl("clPhone").value.trim(), wa: clEl("clWa").value.trim(),
+      email: clEl("clEmail").value.trim(), fee: fee, currency: clEl("clCurrency").value,
+      status: clEl("clStatus").value, startedAt: started, notes: clEl("clNotes").value,
+      payments: existing ? existing.payments : [], updatedAt: Date.now()
+    };
+    if (existing) { clClients[clClients.indexOf(existing)] = c; } else { clClients.push(c); }
+    clPersist();
+    clPushClient(c);
+    clSelectedId = c.id;
+    clRenderKpis();
+    clRenderList();
+    clRenderForm();
+    toast(existing ? "Client updated" : "Client added");
+  }
+
+  function clDelete() {
+    if (!clSelectedId) return;
+    var c = clFind(clSelectedId);
+    if (!c) return;
+    if (!window.confirm("Delete " + c.name + "? This removes their record and payment history from every device.")) return;
+    clClients.splice(clClients.indexOf(c), 1);
+    clPersist();
+    if (clDeleted.indexOf(c.id) === -1) {
+      clDeleted.push(c.id);
+      if (clDeleted.length > 2000) clDeleted.shift();
+      csSaveJson(CL_DELETED_KEY, clDeleted);
+    }
+    clDeleteRemote(c.id);
+    clSelectedId = null;
+    clEl("clForm").hidden = true;
+    clEl("clEmpty").hidden = false;
+    clRenderKpis();
+    clRenderList();
+    toast("Client deleted");
+  }
+
+  function clLogPayment() {
+    if (!clSelectedId) return;
+    var c = clFind(clSelectedId);
+    if (!c) return;
+    var amount = parseFloat(clEl("clPayAmount").value);
+    if (!isFinite(amount) || amount <= 0) { clEl("clPayError").textContent = "Enter an amount greater than 0."; return; }
+    var date = new Date(clEl("clPayDate").value).getTime();
+    if (!isFinite(date)) date = Date.now();
+    c.payments.push({
+      id: csUuid(), date: date, amount: amount,
+      method: clEl("clPayMethod").value, note: clEl("clPayNote").value.trim()
+    });
+    c.updatedAt = Date.now();
+    clPersist();
+    clPushClient(c);
+    clRenderKpis();
+    clRenderList();
+    clRenderPayments(c);
+    toast("Payment logged");
+  }
+
+  function clRemovePayment(paymentId) {
+    if (!clSelectedId) return;
+    var c = clFind(clSelectedId);
+    if (!c) return;
+    if (!window.confirm("Remove this payment?")) return;
+    c.payments = c.payments.filter(function (p) { return p.id !== paymentId; });
+    c.updatedAt = Date.now();
+    clPersist();
+    clPushClient(c);
+    clRenderKpis();
+    clRenderList();
+    clRenderPayments(c);
+  }
+
+  function clBoot() {
+    clBooted = true;
+    clEl("clNewBtn").addEventListener("click", clNew);
+    clEl("clSave").addEventListener("click", clSave);
+    clEl("clDeleteBtn").addEventListener("click", clDelete);
+    clEl("clLogPayment").addEventListener("click", clLogPayment);
+    var clQDebounce = null;
+    clEl("clQ").addEventListener("input", function () { clearTimeout(clQDebounce); clQDebounce = setTimeout(clRenderList, 150); });
+    clEl("clStatusFilter").addEventListener("change", clRenderList);
+    clEl("clList").addEventListener("click", function (ev) {
+      var li = ev.target.closest(".cs-q-item");
+      if (li) clSelect(li.dataset.id);
+    });
+    clEl("clList").addEventListener("keydown", function (ev) {
+      if (ev.key !== "Enter" && ev.key !== " ") return;
+      var li = ev.target.closest(".cs-q-item");
+      if (li) { ev.preventDefault(); clSelect(li.dataset.id); }
+    });
+    clEl("clPaymentRows").addEventListener("click", function (ev) {
+      var del = ev.target.closest("button[data-del]");
+      if (del) clRemovePayment(del.dataset.del);
+    });
+    clLoadRemote();
+    clRenderKpis();
+    clRenderList();
+    clRenderSync();
+  }
+
   /* ---------- tabs ---------- */
 
-  var CS_TABS = ["leads", "calls", "cost"];
+  // Written as a loop over this list — rather than one hardcoded line per
+  // tab — so a new tab only needs adding here and to the click-wiring below,
+  // instead of every place a tab name used to be spelled out individually.
+  var CS_TABS = ["leads", "calls", "clients", "cost"];
+
+  function csTabId(name) { return name[0].toUpperCase() + name.slice(1); }
 
   function csShowView(name) {
     if (CS_TABS.indexOf(name) === -1) name = "leads";
-    csEl("viewLeads").hidden = name !== "leads";
-    csEl("viewCalls").hidden = name !== "calls";
-    csEl("viewCost").hidden = name !== "cost";
-    csEl("tabLeads").setAttribute("aria-selected", String(name === "leads"));
-    csEl("tabCalls").setAttribute("aria-selected", String(name === "calls"));
-    csEl("tabCost").setAttribute("aria-selected", String(name === "cost"));
-    csEl("tabLeads").tabIndex = name === "leads" ? 0 : -1;
-    csEl("tabCalls").tabIndex = name === "calls" ? 0 : -1;
-    csEl("tabCost").tabIndex = name === "cost" ? 0 : -1;
+    CS_TABS.forEach(function (t) {
+      var on = t === name;
+      csEl("view" + csTabId(t)).hidden = !on;
+      var tab = csEl("tab" + csTabId(t));
+      tab.setAttribute("aria-selected", String(on));
+      tab.tabIndex = on ? 0 : -1;
+    });
     document.querySelector(".region-picker").hidden = name !== "leads" || countries.length <= 1;
     csEl("exportBtn").hidden = name !== "leads";
     try { history.replaceState(null, "", "#" + name); } catch (e) {}
@@ -4018,6 +4523,9 @@
       csRenderAll();
     } else if (name === "cost") {
       if (!ccBooted) ccBoot();
+    } else if (name === "clients") {
+      if (!clBooted) clBoot();
+      else clRenderAll();
     }
   }
 
@@ -4048,16 +4556,16 @@
 
   /* ---------- call system events ---------- */
 
-  csEl("tabLeads").addEventListener("click", function () { csShowView("leads"); });
-  csEl("tabCalls").addEventListener("click", function () { csShowView("calls"); });
-  csEl("tabCost").addEventListener("click", function () { csShowView("cost"); });
+  CS_TABS.forEach(function (t) {
+    csEl("tab" + csTabId(t)).addEventListener("click", function () { csShowView(t); });
+  });
   document.querySelector(".tabs").addEventListener("keydown", function (ev) {
     if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
-    var cur = CS_TABS[CS_TABS.indexOf((["viewLeads", "viewCalls", "viewCost"].filter(function (id) { return !csEl(id).hidden; })[0] || "viewLeads").replace("view", "").toLowerCase())];
+    var cur = CS_TABS.filter(function (t) { return !csEl("view" + csTabId(t)).hidden; })[0] || "leads";
     var i = CS_TABS.indexOf(cur);
     var next = CS_TABS[(i + (ev.key === "ArrowRight" ? 1 : CS_TABS.length - 1)) % CS_TABS.length];
     csShowView(next);
-    csEl("tab" + next[0].toUpperCase() + next.slice(1)).focus();
+    csEl("tab" + csTabId(next)).focus();
   });
 
   var csQDebounce = null;
