@@ -1243,6 +1243,7 @@
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button type="button" role="tab" id="tabLeads" aria-selected="true" aria-controls="viewLeads">Leads</button>
     <button type="button" role="tab" id="tabCalls" aria-selected="false" aria-controls="viewCalls" tabindex="-1">Call system <span class="cs-dot" id="tabDot" data-state="off" aria-hidden="true"></span></button>
+    <button type="button" role="tab" id="tabCost" aria-selected="false" aria-controls="viewCost" tabindex="-1">Cost calculator</button>
   </nav>
 
   <div id="viewLeads" class="view" role="tabpanel" aria-labelledby="tabLeads">
@@ -1525,6 +1526,53 @@
         </table>
       </div>
       <div class="empty" id="csLogEmpty">No calls logged yet.</div>
+    </section>
+  </div>
+
+  <div id="viewCost" class="view" role="tabpanel" aria-labelledby="tabCost" hidden>
+    <section class="cs-panel" aria-label="Twilio rates">
+      <div class="cs-panel-head"><h2>Twilio rates</h2></div>
+      <p class="cs-hint">
+        Twilio bills per minute, per leg, each leg rounded up to the next full minute.
+        Defaults are the rates you gave &mdash; check
+        <a href="https://www.twilio.com/en-us/voice/pricing/gb" target="_blank" rel="noopener noreferrer">Twilio's pricing page</a>
+        for today's numbers and edit them here if they've changed.
+      </p>
+      <div class="cs-filter-grid" style="grid-template-columns:1fr 1fr">
+        <label class="cs-field"><span>Browser leg ($/min)</span><input type="text" inputmode="decimal" id="ccBrowser"></label>
+        <label class="cs-field"><span>UK landline leg ($/min)</span><input type="text" inputmode="decimal" id="ccLandline"></label>
+        <label class="cs-field"><span>UK mobile leg ($/min)</span><input type="text" inputmode="decimal" id="ccMobile"></label>
+        <label class="cs-field"><span>UK number rental ($/month)</span><input type="text" inputmode="decimal" id="ccRental"></label>
+      </div>
+      <button type="button" class="cs-link" id="ccResetRates">Reset to the rates you gave me</button>
+    </section>
+
+    <section class="cs-panel" aria-label="Your calling plan">
+      <div class="cs-panel-head"><h2>Your calling plan</h2></div>
+      <div class="cs-filter-grid" style="grid-template-columns:1fr 1fr">
+        <label class="cs-field"><span>Calls per day</span><input type="number" min="0" step="1" id="ccCallsPerDay" value="50"></label>
+        <label class="cs-field"><span>Calling days per month</span><input type="number" min="0" step="1" id="ccDaysPerMonth" value="22"></label>
+        <label class="cs-field"><span>Avg. minutes on the line per call</span><input type="number" min="0" step="0.5" id="ccMinutes" value="3"></label>
+        <label class="cs-field"><span>% of calls to mobiles</span><input type="number" min="0" max="100" step="5" id="ccMobilePct" value="49"></label>
+      </div>
+      <p class="cs-hint">
+        "Minutes on the line" is ring time plus talk time &mdash; the browser leg bills from when you
+        press Call, the UK leg only from when they answer. This estimate treats both as the same
+        length, which is close enough for planning and slightly overstates the real cost.
+      </p>
+    </section>
+
+    <section class="kpis" id="ccResults" aria-label="Estimated cost"></section>
+
+    <section class="cs-panel" aria-label="Cost per call">
+      <div class="cs-panel-head"><h2>Cost per call, by length</h2></div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Minutes on the line</th><th>Landline</th><th>Mobile</th></tr></thead>
+          <tbody id="ccTable"></tbody>
+        </table>
+      </div>
+      <p class="cs-hint">Twilio rounds each leg up to the next full minute, so 3:01 costs the same as 4:00 &mdash; that's why the jumps are stepped, not smooth.</p>
     </section>
   </div>
 </div>
@@ -3836,22 +3884,117 @@
     csRenderAll();
   }
 
+  /* ================================================================
+     Cost calculator — what a calling session actually costs on Twilio
+     ----------------------------------------------------------------
+     Pure arithmetic on the rates you gave me: no network calls, nothing
+     billed. Editable so it stays right if Twilio's prices change.
+     ================================================================ */
+
+  var CC_KEY = "signalboard.cost.settings.v1";
+  var CC_DEFAULTS = { browser: 0.0040, landline: 0.0158, mobile: 0.0305, rental: 1.00 };
+  var ccSettings = Object.assign({}, CC_DEFAULTS, csLoadJson(CC_KEY, {}));
+  var ccBooted = false;
+
+  function ccNum(id, fallback) {
+    var v = parseFloat(csEl(id).value);
+    return isFinite(v) && v >= 0 ? v : fallback;
+  }
+
+  // Twilio bills each leg in full-minute steps, rounded up — a 2:05 call
+  // costs the same as 3:00, not 2.08 minutes' worth.
+  function ccPerCall(minutes, legRate) {
+    return Math.ceil(Math.max(0, minutes)) * (ccSettings.browser + legRate);
+  }
+
+  function ccMoney(n) {
+    return "$" + n.toFixed(n < 1 ? 4 : 2);
+  }
+
+  function ccRender() {
+    ccSettings.browser = ccNum("ccBrowser", CC_DEFAULTS.browser);
+    ccSettings.landline = ccNum("ccLandline", CC_DEFAULTS.landline);
+    ccSettings.mobile = ccNum("ccMobile", CC_DEFAULTS.mobile);
+    ccSettings.rental = ccNum("ccRental", CC_DEFAULTS.rental);
+    csSaveJson(CC_KEY, ccSettings);
+
+    var callsPerDay = Math.max(0, parseInt(csEl("ccCallsPerDay").value, 10) || 0);
+    var daysPerMonth = Math.max(0, parseInt(csEl("ccDaysPerMonth").value, 10) || 0);
+    var minutes = Math.max(0, parseFloat(csEl("ccMinutes").value) || 0);
+    var mobilePct = Math.min(100, Math.max(0, parseFloat(csEl("ccMobilePct").value) || 0)) / 100;
+
+    var perCallLandline = ccPerCall(minutes, ccSettings.landline);
+    var perCallMobile = ccPerCall(minutes, ccSettings.mobile);
+    var blendedPerCall = perCallLandline * (1 - mobilePct) + perCallMobile * mobilePct;
+    var perDay = blendedPerCall * callsPerDay;
+    var perMonthCalls = perDay * daysPerMonth;
+    var perMonth = perMonthCalls + ccSettings.rental;
+    var callsPerMonth = callsPerDay * daysPerMonth;
+
+    var tiles = [
+      { label: "Per landline call", value: ccMoney(perCallLandline), note: Math.ceil(minutes) + " min, rounded up" },
+      { label: "Per mobile call", value: ccMoney(perCallMobile), note: Math.ceil(minutes) + " min, rounded up" },
+      { label: "Per calling day", value: ccMoney(perDay), note: callsPerDay.toLocaleString() + " calls, " + Math.round(mobilePct * 100) + "% mobile" },
+      { label: "Per month — calls", value: ccMoney(perMonthCalls), note: callsPerMonth.toLocaleString() + " calls across " + daysPerMonth + " days", cls: "is-accent" },
+      { label: "Per month — total", value: ccMoney(perMonth), note: "calls + " + ccMoney(ccSettings.rental) + " number rental", cls: "is-prime" }
+    ];
+    csEl("ccResults").innerHTML = tiles.map(function (t) {
+      return '<div class="kpi">' +
+        '<span class="kpi-label">' + esc(t.label) + "</span>" +
+        '<span class="kpi-value ' + (t.cls || "") + '">' + esc(t.value) + "</span>" +
+        '<span class="kpi-note">' + esc(t.note) + "</span>" +
+        "</div>";
+    }).join("");
+
+    var rows = [1, 2, 3, 5, 10, 15, 20, 30];
+    csEl("ccTable").innerHTML = rows.map(function (m) {
+      return "<tr><td>" + m + " min</td><td class=\"num\">" + ccMoney(ccPerCall(m, ccSettings.landline)) +
+        "</td><td class=\"num\">" + ccMoney(ccPerCall(m, ccSettings.mobile)) + "</td></tr>";
+    }).join("");
+  }
+
+  function ccBoot() {
+    ccBooted = true;
+    csEl("ccBrowser").value = ccSettings.browser;
+    csEl("ccLandline").value = ccSettings.landline;
+    csEl("ccMobile").value = ccSettings.mobile;
+    csEl("ccRental").value = ccSettings.rental;
+    ["ccBrowser", "ccLandline", "ccMobile", "ccRental", "ccCallsPerDay", "ccDaysPerMonth", "ccMinutes", "ccMobilePct"]
+      .forEach(function (id) { csEl(id).addEventListener("input", ccRender); });
+    csEl("ccResetRates").addEventListener("click", function () {
+      ccSettings = Object.assign({}, CC_DEFAULTS);
+      csEl("ccBrowser").value = ccSettings.browser;
+      csEl("ccLandline").value = ccSettings.landline;
+      csEl("ccMobile").value = ccSettings.mobile;
+      csEl("ccRental").value = ccSettings.rental;
+      ccRender();
+    });
+    ccRender();
+  }
+
   /* ---------- tabs ---------- */
 
+  var CS_TABS = ["leads", "calls", "cost"];
+
   function csShowView(name) {
-    var calls = name === "calls";
-    csEl("viewLeads").hidden = calls;
-    csEl("viewCalls").hidden = !calls;
-    csEl("tabLeads").setAttribute("aria-selected", String(!calls));
-    csEl("tabCalls").setAttribute("aria-selected", String(calls));
-    csEl("tabLeads").tabIndex = calls ? -1 : 0;
-    csEl("tabCalls").tabIndex = calls ? 0 : -1;
-    document.querySelector(".region-picker").hidden = calls || countries.length <= 1;
-    csEl("exportBtn").hidden = calls;
-    try { history.replaceState(null, "", calls ? "#calls" : "#leads"); } catch (e) {}
-    if (calls) {
+    if (CS_TABS.indexOf(name) === -1) name = "leads";
+    csEl("viewLeads").hidden = name !== "leads";
+    csEl("viewCalls").hidden = name !== "calls";
+    csEl("viewCost").hidden = name !== "cost";
+    csEl("tabLeads").setAttribute("aria-selected", String(name === "leads"));
+    csEl("tabCalls").setAttribute("aria-selected", String(name === "calls"));
+    csEl("tabCost").setAttribute("aria-selected", String(name === "cost"));
+    csEl("tabLeads").tabIndex = name === "leads" ? 0 : -1;
+    csEl("tabCalls").tabIndex = name === "calls" ? 0 : -1;
+    csEl("tabCost").tabIndex = name === "cost" ? 0 : -1;
+    document.querySelector(".region-picker").hidden = name !== "leads" || countries.length <= 1;
+    csEl("exportBtn").hidden = name !== "leads";
+    try { history.replaceState(null, "", "#" + name); } catch (e) {}
+    if (name === "calls") {
       if (!csBooted) csBoot();
       csRenderAll();
+    } else if (name === "cost") {
+      if (!ccBooted) ccBoot();
     }
   }
 
@@ -3884,11 +4027,14 @@
 
   csEl("tabLeads").addEventListener("click", function () { csShowView("leads"); });
   csEl("tabCalls").addEventListener("click", function () { csShowView("calls"); });
+  csEl("tabCost").addEventListener("click", function () { csShowView("cost"); });
   document.querySelector(".tabs").addEventListener("keydown", function (ev) {
     if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
-    var toCalls = csEl("viewCalls").hidden;
-    csShowView(toCalls ? "calls" : "leads");
-    csEl(toCalls ? "tabCalls" : "tabLeads").focus();
+    var cur = CS_TABS[CS_TABS.indexOf((["viewLeads", "viewCalls", "viewCost"].filter(function (id) { return !csEl(id).hidden; })[0] || "viewLeads").replace("view", "").toLowerCase())];
+    var i = CS_TABS.indexOf(cur);
+    var next = CS_TABS[(i + (ev.key === "ArrowRight" ? 1 : CS_TABS.length - 1)) % CS_TABS.length];
+    csShowView(next);
+    csEl("tab" + next[0].toUpperCase() + next.slice(1)).focus();
   });
 
   var csQDebounce = null;
@@ -4115,12 +4261,12 @@
     }
   });
 
-  if (location.hash === "#calls") csShowView("calls");
-  // A #calls / #leads link opened while the page is already up (or Back
-  // and Forward) switches tab too, instead of doing nothing.
+  if (CS_TABS.indexOf(location.hash.slice(1)) !== -1) csShowView(location.hash.slice(1));
+  // A #calls / #cost / #leads link opened while the page is already up (or
+  // Back and Forward) switches tab too, instead of doing nothing.
   window.addEventListener("hashchange", function () {
-    var want = location.hash === "#calls" ? "calls" : "leads";
-    if ((want === "calls") === csEl("viewCalls").hidden) csShowView(want);
+    var want = CS_TABS.indexOf(location.hash.slice(1)) !== -1 ? location.hash.slice(1) : "leads";
+    csShowView(want);
   });
 
   render();
