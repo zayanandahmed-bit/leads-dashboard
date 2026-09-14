@@ -1626,7 +1626,10 @@
           </div>
 
           <div class="cs-history" id="clPaymentsWrap" hidden>
-            <p class="section-label">Payments</p>
+            <div class="cs-panel-head">
+              <p class="section-label" style="margin:0">Payments</p>
+              <button type="button" class="cs-link-danger" id="clClearPayments" hidden>Delete all payments</button>
+            </div>
             <div class="table-scroll">
               <table>
                 <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Notes</th><th aria-label="Remove payment"></th></tr></thead>
@@ -4410,6 +4413,7 @@
         '<td><button type="button" class="cs-del" data-del="' + esc(p.id) + '" aria-label="Remove this payment" title="Remove this payment">&times;</button></td></tr>';
     }).join("");
     clEl("clPaymentsEmpty").hidden = rows.length > 0;
+    clEl("clClearPayments").hidden = rows.length === 0;
     clEl("clPayType").value = "monthly";
     clEl("clPayAmount").value = c.fee || "";
     clEl("clPayDate").value = new Date().toISOString().slice(0, 10);
@@ -4560,11 +4564,31 @@
     clRenderPayments(c);
   }
 
+  // Clearing every payment resets the due date back to their start date —
+  // same as a brand-new client with nothing logged yet.
+  function clClearAllPayments() {
+    if (!clSelectedId) return;
+    var c = clFind(clSelectedId);
+    if (!c || !c.payments.length) return;
+    var n = c.payments.length;
+    if (!window.confirm("Delete all " + n + " payment" + (n === 1 ? "" : "s") + " logged for " + c.name +
+        "? This can't be undone, and resets their due date back to their start date.")) return;
+    c.payments = [];
+    c.updatedAt = Date.now();
+    clPersist();
+    clPushClient(c);
+    clRenderKpis();
+    clRenderList();
+    clRenderPayments(c);
+    toast("All payments deleted");
+  }
+
   function clBoot() {
     clBooted = true;
     clEl("clNewBtn").addEventListener("click", clNew);
     clEl("clSave").addEventListener("click", clSave);
     clEl("clDeleteBtn").addEventListener("click", clDelete);
+    clEl("clClearPayments").addEventListener("click", clClearAllPayments);
     clEl("clLogPayment").addEventListener("click", clLogPayment);
     clEl("clPayType").addEventListener("change", function () {
       var c = clSelectedId ? clFind(clSelectedId) : null;
