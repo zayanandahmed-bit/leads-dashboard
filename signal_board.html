@@ -1273,13 +1273,46 @@
   </header>
 
   <nav class="tabs" role="tablist" aria-label="Sections">
-    <button type="button" role="tab" id="tabLeads" aria-selected="true" aria-controls="viewLeads">Leads</button>
+    <button type="button" role="tab" id="tabToday" aria-selected="true" aria-controls="viewToday">Today</button>
+    <button type="button" role="tab" id="tabLeads" aria-selected="false" aria-controls="viewLeads" tabindex="-1">Leads</button>
     <button type="button" role="tab" id="tabCalls" aria-selected="false" aria-controls="viewCalls" tabindex="-1">Call system <span class="cs-dot" id="tabDot" data-state="off" aria-hidden="true"></span></button>
     <button type="button" role="tab" id="tabClients" aria-selected="false" aria-controls="viewClients" tabindex="-1">Clients</button>
     <button type="button" role="tab" id="tabCost" aria-selected="false" aria-controls="viewCost" tabindex="-1">Cost calculator</button>
   </nav>
 
-  <div id="viewLeads" class="view" role="tabpanel" aria-labelledby="tabLeads">
+  <div id="viewToday" class="view" role="tabpanel" aria-labelledby="tabToday">
+    <section class="kpis" id="tdKpis" aria-label="Today's summary"></section>
+
+    <section class="cs-panel" aria-label="Callbacks due">
+      <div class="cs-panel-head">
+        <h2>Callbacks due</h2>
+        <span class="cs-count num" id="tdCallbacksCount"></span>
+      </div>
+      <ol class="cs-queue-list" id="tdCallbacksList" style="max-height:360px"></ol>
+      <div class="empty" id="tdCallbacksEmpty" hidden>Nothing due &mdash; you're caught up.</div>
+    </section>
+
+    <section class="cs-panel" aria-label="Clients needing attention">
+      <div class="cs-panel-head">
+        <h2>Clients needing attention</h2>
+        <span class="cs-count num" id="tdClientsCount"></span>
+      </div>
+      <ol class="cs-queue-list" id="tdClientsList" style="max-height:360px"></ol>
+      <div class="empty" id="tdClientsEmpty" hidden>Everyone's paid up.</div>
+    </section>
+
+    <section class="cs-panel" aria-label="Best leads not called yet">
+      <div class="cs-panel-head">
+        <h2>Best leads not called yet</h2>
+        <span class="cs-count num" id="tdLeadsCount"></span>
+      </div>
+      <p class="cs-hint">Highest signal score, no call logged yet, not marked won or lost.</p>
+      <ol class="cs-queue-list" id="tdLeadsList" style="max-height:360px"></ol>
+      <div class="empty" id="tdLeadsEmpty" hidden>No fresh leads left with a number to call.</div>
+    </section>
+  </div>
+
+  <div id="viewLeads" class="view" role="tabpanel" aria-labelledby="tabLeads" hidden>
   <section class="kpis" id="kpis" aria-label="Pipeline summary"></section>
 
   <section class="controls">
@@ -4621,17 +4654,168 @@
     clRenderSync();
   }
 
+  /* ================================================================
+     Today — the landing tab. Pulls together what already lives in the
+     Leads pipeline, the Call system's log, and Clients: callbacks due,
+     clients who need chasing, and the best leads nobody's called yet.
+     Nothing new is stored here — it's a read-only view over that data,
+     so it's always as fresh as whichever tab last synced.
+     ================================================================ */
+
+  var tdBooted = false;
+
+  // Every lead with a callback logged against it, due today or already
+  // overdue — same "due" definition the Call queue's "Callbacks due"
+  // filter uses, just surfaced here without having to switch tabs.
+  function tdCallbacksDue() {
+    var byLead = csLogsByLead();
+    var eod = csEndOfToday();
+    var out = [];
+    Object.keys(byLead).forEach(function (id) {
+      var cb = csPendingCallback(byLead[id]);
+      var lead = LEAD_BY_ID[id];
+      if (cb && cb <= eod && lead) out.push({ lead: lead, due: cb });
+    });
+    out.sort(function (a, b) { return a.due - b.due; });   // most overdue first
+    return out;
+  }
+
+  // Active clients who are overdue or due inside the next 5 days — the
+  // same "warn"/"bad" tones the Clients list already uses, just pulled
+  // out here so you don't have to open that tab to know they need it.
+  function tdClientsNeedingAttention() {
+    var out = [];
+    clClients.forEach(function (c) {
+      if (c.status !== "active") return;
+      var tag = clDueTag(c);
+      if (tag && (tag.tone === "bad" || tag.tone === "warn")) out.push({ client: c, tag: tag, due: clNextDue(c) });
+    });
+    out.sort(function (a, b) { return a.due - b.due; });
+    return out;
+  }
+
+  // Highest-signal leads nobody's called, isn't already won/lost, and
+  // actually has a diallable number — the same shape as the Call queue's
+  // "Not called yet" filter, capped to a short, worth-actually-calling list.
+  function tdTopUncalled(limit) {
+    var byLead = csLogsByLead();
+    return LEADS.filter(function (l) {
+      if (byLead[l.id]) return false;
+      var st = statusOf(l.id);
+      if (st === "won" || st === "lost") return false;
+      return csLinesFor(l).length > 0;
+    }).sort(function (a, b) { return b.score - a.score; }).slice(0, limit);
+  }
+
+  function tdRenderKpis() {
+    var callbacks = tdCallbacksDue();
+    var overdueCallbacks = callbacks.filter(function (x) { return x.due < Date.now(); }).length;
+    var clientsAttn = tdClientsNeedingAttention();
+    var clientsOverdue = clientsAttn.filter(function (x) { return x.tag.tone === "bad"; }).length;
+    var primeUncalled = tdTopUncalled(100000).filter(function (l) { return l.band === "prime"; }).length;
+
+    var tiles = [
+      { label: "Callbacks due", value: callbacks.length, note: overdueCallbacks ? overdueCallbacks + " overdue" : "none overdue", cls: overdueCallbacks ? "is-prime" : "" },
+      { label: "Clients needing attention", value: clientsAttn.length, note: clientsOverdue ? clientsOverdue + " overdue" : "just due soon", cls: clientsOverdue ? "is-prime" : "" },
+      { label: "Prime leads uncalled", value: primeUncalled, note: "score 75+, never called", cls: "is-accent" }
+    ];
+    tdEl("tdKpis").innerHTML = tiles.map(function (t) {
+      return '<div class="kpi">' +
+        '<span class="kpi-label">' + esc(t.label) + "</span>" +
+        '<span class="kpi-value ' + (t.cls || "") + '">' + esc(t.value) + "</span>" +
+        '<span class="kpi-note">' + esc(t.note) + "</span>" +
+        "</div>";
+    }).join("");
+  }
+
+  function tdEl(id) { return document.getElementById(id); }
+
+  function tdRenderCallbacks() {
+    var items = tdCallbacksDue().slice(0, 30);
+    var now = Date.now();
+    tdEl("tdCallbacksCount").textContent = items.length ? items.length.toLocaleString() + (items.length === 1 ? " due" : " due") : "";
+    tdEl("tdCallbacksList").innerHTML = items.map(function (x) {
+      var tone = x.due < now ? "bad" : "warn";
+      return '<li class="cs-q-item" data-kind="callback" data-id="' + esc(x.lead.id) + '" tabindex="0">' +
+        '<span class="cs-q-name">' + esc(x.lead.name) + "</span>" +
+        '<span class="cs-chip" data-tone="' + tone + '">' + esc(x.due < now ? "overdue" : "due") + " " + esc(csWhen(x.due)) + "</span>" +
+        '<span class="cs-q-sub">' + esc(x.lead.city) + " &middot; " + esc(x.lead.vertical) + "</span>" +
+        "</li>";
+    }).join("");
+    tdEl("tdCallbacksEmpty").hidden = items.length > 0;
+  }
+
+  function tdRenderClients() {
+    var items = tdClientsNeedingAttention().slice(0, 30);
+    tdEl("tdClientsCount").textContent = items.length ? items.length.toLocaleString() : "";
+    tdEl("tdClientsList").innerHTML = items.map(function (x) {
+      return '<li class="cs-q-item" data-kind="client" data-id="' + esc(x.client.id) + '" tabindex="0">' +
+        '<span class="cs-q-name">' + esc(x.client.name) + "</span>" +
+        '<span class="cs-chip" data-tone="' + x.tag.tone + '">' + esc(x.tag.text) + "</span>" +
+        '<span class="cs-q-sub">' + esc(clMoney(x.client.fee, x.client.currency)) + "/mo</span>" +
+        "</li>";
+    }).join("");
+    tdEl("tdClientsEmpty").hidden = items.length > 0;
+  }
+
+  function tdRenderLeads() {
+    var items = tdTopUncalled(10);
+    tdEl("tdLeadsCount").textContent = items.length ? items.length.toLocaleString() : "";
+    tdEl("tdLeadsList").innerHTML = items.map(function (l) {
+      return '<li class="cs-q-item" data-kind="lead" data-id="' + esc(l.id) + '" tabindex="0">' +
+        '<span class="cs-q-name">' + esc(l.name) + "</span>" +
+        '<span class="cs-q-score score-num ' + l.band + '">' + l.score + "</span>" +
+        '<span class="cs-q-sub">' + esc(l.city) + " &middot; " + esc(l.vertical) + "</span>" +
+        "</li>";
+    }).join("");
+    tdEl("tdLeadsEmpty").hidden = items.length > 0;
+  }
+
+  function tdRenderAll() {
+    tdRenderKpis();
+    tdRenderCallbacks();
+    tdRenderClients();
+    tdRenderLeads();
+  }
+
+  function tdOpen(kind, id) {
+    if (kind === "client") { csShowView("clients"); clSelect(id); return; }
+    csShowView("calls");   // callback or lead — both are calling tasks
+    csSelectLead(id, { force: true });
+  }
+
+  function tdBoot() {
+    tdBooted = true;
+    // Today aggregates the other tabs' data, so it needs them actually
+    // synced — not just whatever this device happened to have cached —
+    // even though the user hasn't opened those tabs yet.
+    if (!csBooted) csBoot();
+    if (!clBooted) clBoot();
+    ["tdCallbacksList", "tdClientsList", "tdLeadsList"].forEach(function (id) {
+      tdEl(id).addEventListener("click", function (ev) {
+        var li = ev.target.closest(".cs-q-item");
+        if (li) tdOpen(li.dataset.kind, li.dataset.id);
+      });
+      tdEl(id).addEventListener("keydown", function (ev) {
+        if (ev.key !== "Enter" && ev.key !== " ") return;
+        var li = ev.target.closest(".cs-q-item");
+        if (li) { ev.preventDefault(); tdOpen(li.dataset.kind, li.dataset.id); }
+      });
+    });
+    tdRenderAll();
+  }
+
   /* ---------- tabs ---------- */
 
   // Written as a loop over this list — rather than one hardcoded line per
   // tab — so a new tab only needs adding here and to the click-wiring below,
   // instead of every place a tab name used to be spelled out individually.
-  var CS_TABS = ["leads", "calls", "clients", "cost"];
+  var CS_TABS = ["today", "leads", "calls", "clients", "cost"];
 
   function csTabId(name) { return name[0].toUpperCase() + name.slice(1); }
 
   function csShowView(name) {
-    if (CS_TABS.indexOf(name) === -1) name = "leads";
+    if (CS_TABS.indexOf(name) === -1) name = "today";
     CS_TABS.forEach(function (t) {
       var on = t === name;
       csEl("view" + csTabId(t)).hidden = !on;
@@ -4650,6 +4834,9 @@
     } else if (name === "clients") {
       if (!clBooted) clBoot();
       else clRenderAll();
+    } else if (name === "today") {
+      if (!tdBooted) tdBoot();
+      else tdRenderAll();
     }
   }
 
@@ -4916,11 +5103,15 @@
     }
   });
 
-  if (CS_TABS.indexOf(location.hash.slice(1)) !== -1) csShowView(location.hash.slice(1));
+  // Always resolves to a real tab — including on a plain load with no
+  // hash at all, which used to leave Today's KPIs and lists unbuilt
+  // (they only got populated inside csShowView) even though its markup
+  // was already sitting there visible.
+  csShowView(CS_TABS.indexOf(location.hash.slice(1)) !== -1 ? location.hash.slice(1) : "today");
   // A #calls / #cost / #leads link opened while the page is already up (or
   // Back and Forward) switches tab too, instead of doing nothing.
   window.addEventListener("hashchange", function () {
-    var want = CS_TABS.indexOf(location.hash.slice(1)) !== -1 ? location.hash.slice(1) : "leads";
+    var want = CS_TABS.indexOf(location.hash.slice(1)) !== -1 ? location.hash.slice(1) : "today";
     csShowView(want);
   });
 
