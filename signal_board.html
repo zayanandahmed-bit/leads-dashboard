@@ -9,36 +9,37 @@
 
 <style>
   :root {
-    /* Light palette. Neutrals carry a slight teal bias so they read as chosen. */
-    --ground:        #E9EEEE;
+    /* Light palette — clean, bright, high-contrast. Cool near-white ground,
+       vivid blue as the one accent, vivid rose/amber for urgency. */
+    --ground:        #F5F7FB;
     --surface:       #FFFFFF;
-    --surface-sunk:  #F3F6F6;
-    --line:          #D2DBDA;
-    --line-strong:   #B6C3C2;
-    --ink:           #0F1A1B;
-    --ink-soft:      #3D4E4E;
-    --ink-muted:     #677978;
-    --accent:        #0B6B58;
-    --accent-soft:   #DCEEE8;
-    --accent-ink:    #08503F;
+    --surface-sunk:  #F0F3F9;
+    --line:          #E2E8F3;
+    --line-strong:   #C7D0E3;
+    --ink:           #101828;
+    --ink-soft:      #475467;
+    --ink-muted:     #8B97AC;
+    --accent:        #2563EB;
+    --accent-soft:   #DCE8FF;
+    --accent-ink:    #1D4ED8;
 
-    /* Priority ramp — deliberately warm, so urgency never reads as accent. */
-    --prime:         #9E3D18;
-    --prime-soft:    #F7E3D9;
-    --strong:        #7D6413;
-    --strong-soft:   #F4EDD5;
-    --watch:         #627372;
-    --watch-soft:    #E6EBEB;
+    /* Priority ramp — bright and legible at a glance, not a muted echo of ink. */
+    --prime:         #E11D48;
+    --prime-soft:    #FFE1E7;
+    --strong:        #D97706;
+    --strong-soft:   #FEF0D2;
+    --watch:         #64748B;
+    --watch-soft:    #EDF1F7;
 
     /* Pipeline states. */
-    --st-new:        #677978;
-    --st-contacted:  #2F5C86;
-    --st-replied:    #0B6B58;
-    --st-won:        #14603A;
-    --st-lost:       #8A3B36;
+    --st-new:        #94A3B8;
+    --st-contacted:  #2563EB;
+    --st-replied:    #059669;
+    --st-won:        #16A34A;
+    --st-lost:       #E11D48;
 
-    --radius:        3px;
-    --shadow:        0 1px 2px rgba(15, 26, 27, .06), 0 8px 24px rgba(15, 26, 27, .07);
+    --radius:        8px;
+    --shadow:        0 1px 2px rgba(16, 24, 40, .05), 0 6px 16px rgba(16, 24, 40, .06);
 
     --font-display:  "IBM Plex Sans Condensed", "Helvetica Neue", Arial, sans-serif;
     --font-body:     "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
@@ -47,62 +48,62 @@
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --ground:        #0C1213;
-      --surface:       #151E1E;
-      --surface-sunk:  #101818;
-      --line:          #263433;
-      --line-strong:   #384948;
-      --ink:           #E4ECEB;
-      --ink-soft:      #B3C3C1;
-      --ink-muted:     #819594;
-      --accent:        #3FC7A3;
-      --accent-soft:   #12332C;
-      --accent-ink:    #7EE0C4;
+      --ground:        #0B1220;
+      --surface:       #121A2B;
+      --surface-sunk:  #0D1424;
+      --line:          #1F2A40;
+      --line-strong:   #303E5C;
+      --ink:           #EEF2FA;
+      --ink-soft:      #B9C4DA;
+      --ink-muted:     #7C8AA8;
+      --accent:        #2F63D6;
+      --accent-soft:   #17243D;
+      --accent-ink:    #8FB4FF;
 
-      --prime:         #E68A5C;
-      --prime-soft:    #3A2116;
-      --strong:        #D8B950;
-      --strong-soft:   #322A11;
-      --watch:         #8DA09F;
-      --watch-soft:    #1D2827;
+      --prime:         #FB6F92;
+      --prime-soft:    #3A1421;
+      --strong:        #FBBF24;
+      --strong-soft:   #3A2A08;
+      --watch:         #8592AC;
+      --watch-soft:    #182238;
 
-      --st-new:        #8DA09F;
-      --st-contacted:  #7FB0DE;
-      --st-replied:    #3FC7A3;
-      --st-won:        #56C98A;
-      --st-lost:       #E08A84;
+      --st-new:        #8592AC;
+      --st-contacted:  #5B8DF6;
+      --st-replied:    #34D399;
+      --st-won:        #4ADE80;
+      --st-lost:       #FB6F92;
 
-      --shadow:        0 1px 2px rgba(0, 0, 0, .5), 0 10px 30px rgba(0, 0, 0, .45);
+      --shadow:        0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px rgba(0, 0, 0, .4);
     }
   }
 
   :root[data-theme="dark"] {
-    --ground:        #0C1213;
-    --surface:       #151E1E;
-    --surface-sunk:  #101818;
-    --line:          #263433;
-    --line-strong:   #384948;
-    --ink:           #E4ECEB;
-    --ink-soft:      #B3C3C1;
-    --ink-muted:     #819594;
-    --accent:        #3FC7A3;
-    --accent-soft:   #12332C;
-    --accent-ink:    #7EE0C4;
+    --ground:        #0B1220;
+    --surface:       #121A2B;
+    --surface-sunk:  #0D1424;
+    --line:          #1F2A40;
+    --line-strong:   #303E5C;
+    --ink:           #EEF2FA;
+    --ink-soft:      #B9C4DA;
+    --ink-muted:     #7C8AA8;
+    --accent:        #2F63D6;
+    --accent-soft:   #17243D;
+    --accent-ink:    #8FB4FF;
 
-    --prime:         #E68A5C;
-    --prime-soft:    #3A2116;
-    --strong:        #D8B950;
-    --strong-soft:   #322A11;
-    --watch:         #8DA09F;
-    --watch-soft:    #1D2827;
+    --prime:         #FB6F92;
+    --prime-soft:    #3A1421;
+    --strong:        #FBBF24;
+    --strong-soft:   #3A2A08;
+    --watch:         #8592AC;
+    --watch-soft:    #182238;
 
-    --st-new:        #8DA09F;
-    --st-contacted:  #7FB0DE;
-    --st-replied:    #3FC7A3;
-    --st-won:        #56C98A;
-    --st-lost:       #E08A84;
+    --st-new:        #8592AC;
+    --st-contacted:  #5B8DF6;
+    --st-replied:    #34D399;
+    --st-won:        #4ADE80;
+    --st-lost:       #FB6F92;
 
-    --shadow:        0 1px 2px rgba(0, 0, 0, .5), 0 10px 30px rgba(0, 0, 0, .45);
+    --shadow:        0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px rgba(0, 0, 0, .4);
   }
 
   * { box-sizing: border-box; }
@@ -1091,13 +1092,14 @@
   .btn-call:disabled,
   .btn-call:disabled:hover { background: var(--st-won); border-color: var(--st-won); filter: none; }
 
-  /* The dark palette's green/red are light tints — white text on them is
-     unreadable, so flip to dark ink there. */
+  /* The dark palette's green/red are bright, light-leaning tints — white
+     text on them is unreadable, so flip to the page's own dark ground
+     color there instead (tokenized, so it tracks the palette). */
   :root[data-theme="dark"] .btn-call,
-  :root[data-theme="dark"] .btn-danger { color: #0C1213; }
+  :root[data-theme="dark"] .btn-danger { color: var(--ground); }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .btn-call,
-    :root:not([data-theme="light"]) .btn-danger { color: #0C1213; }
+    :root:not([data-theme="light"]) .btn-danger { color: var(--ground); }
   }
 
   .cs-script { font-size: 13.5px; line-height: 1.55; border-top: 1px solid var(--line); padding-top: 12px; }
