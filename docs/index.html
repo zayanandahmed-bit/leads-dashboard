@@ -1895,7 +1895,7 @@
   }
 
   function loadFromSupabase() {
-    return supabaseGetAll("/rest/v1/lead_status?select=id,status,note,updated_at&order=id").then(function (rows) {
+    return supabaseGetAll("/rest/v1/signalboard_lead_status?select=id,status,note,updated_at&order=id").then(function (rows) {
       supabaseOk = true;
       var changed = false;
       rows.forEach(function (row) {
@@ -1938,7 +1938,7 @@
       ids.forEach(function (id) { pendingSaveIds[id] = true; });
       if (!saveTimer && !keepalive) saveTimer = setTimeout(pushRemote, 30000);
     };
-    return fetch(SUPABASE_URL + "/rest/v1/lead_status", {
+    return fetch(SUPABASE_URL + "/rest/v1/signalboard_lead_status", {
       method: "POST",
       keepalive: !!keepalive,
       headers: supabaseHeaders({ "Prefer": "resolution=merge-duplicates,return=minimal" }),
@@ -2953,7 +2953,7 @@
 
   function csPushLog(g) {
     if (g.demo) return Promise.resolve(false);
-    return fetch(SUPABASE_URL + "/rest/v1/call_log", {
+    return fetch(SUPABASE_URL + "/rest/v1/signalboard_call_log", {
       method: "POST",
       // ignore-duplicates, not merge: the table is insert-only by design, so
       // a retried push must be a no-op rather than an update it can't do.
@@ -2973,7 +2973,7 @@
   }
 
   function csLoadRemoteLogs() {
-    return supabaseGetAll("/rest/v1/call_log?select=*&order=started_at.desc,id").catch(function (err) {
+    return supabaseGetAll("/rest/v1/signalboard_call_log?select=*&order=started_at.desc,id").catch(function (err) {
       if (err && err.status === 404) { csRemote = "missing"; return null; }
       throw err;
     }).then(function (rows) {
@@ -3370,7 +3370,7 @@
   }
 
   function csDeleteRemote(id) {
-    return fetch(SUPABASE_URL + "/rest/v1/call_log?id=eq." + encodeURIComponent(id), {
+    return fetch(SUPABASE_URL + "/rest/v1/signalboard_call_log?id=eq." + encodeURIComponent(id), {
       method: "DELETE",
       headers: supabaseHeaders({ "Prefer": "return=minimal" })
     }).catch(function () {});
@@ -3943,7 +3943,7 @@
     var unsynced = csLogs.filter(function (g) { return !g.demo && !g.synced; }).length;
     el.textContent = {
       synced: unsynced ? unsynced + " call(s) waiting to sync" : "Synced to Supabase",
-      missing: "Saved on this device only — run supabase/call_log.sql to share it across devices",
+      missing: "Saved on this device only — run supabase/setup_all.sql to share it across devices",
       offline: "Couldn't reach Supabase — unsynced calls will retry",
       unknown: ""
     }[csRemote];
@@ -4251,7 +4251,7 @@
   }
 
   function clPushClient(c) {
-    return fetch(SUPABASE_URL + "/rest/v1/clients", {
+    return fetch(SUPABASE_URL + "/rest/v1/signalboard_clients", {
       method: "POST",
       headers: supabaseHeaders({ "Prefer": "resolution=merge-duplicates,return=minimal" }),
       body: JSON.stringify([clRowFromClient(c)])
@@ -4264,14 +4264,14 @@
   }
 
   function clDeleteRemote(id) {
-    return fetch(SUPABASE_URL + "/rest/v1/clients?id=eq." + encodeURIComponent(id), {
+    return fetch(SUPABASE_URL + "/rest/v1/signalboard_clients?id=eq." + encodeURIComponent(id), {
       method: "DELETE",
       headers: supabaseHeaders({ "Prefer": "return=minimal" })
     }).catch(function () {});
   }
 
   function clLoadRemote() {
-    return supabaseGetAll("/rest/v1/clients?select=*&order=name").catch(function (err) {
+    return supabaseGetAll("/rest/v1/signalboard_clients?select=*&order=name").catch(function (err) {
       if (err && err.status === 404) { clRemote = "missing"; return null; }
       throw err;
     }).then(function (rows) {
@@ -4300,7 +4300,7 @@
     var el = clEl("clSyncHint");
     if (!el) return;
     el.textContent = {
-      synced: "Synced to Supabase", missing: "Saved on this device only — run supabase/clients.sql to share it across devices",
+      synced: "Synced to Supabase", missing: "Saved on this device only — run supabase/setup_all.sql to share it across devices",
       offline: "Couldn't reach Supabase — saved on this device, will retry", unknown: ""
     }[clRemote];
   }
