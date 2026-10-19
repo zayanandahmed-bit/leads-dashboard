@@ -5,7 +5,8 @@ real phone calls from your browser:
 
 | Function | What it does |
 |---|---|
-| `/token` | Checks your passcode, then hands the browser a 1-hour, dial-out-only Twilio token |
+| `/token` | Checks your passcode, then hands the browser a 1-hour Twilio token (it can place calls and receive them) |
+| `/incoming` | Twilio asks this when someone rings your number; it rings the open dashboard |
 | `/voice` | Twilio asks this what to do with each call. It only dials allowed country prefixes (UK by default), blocks premium-rate numbers, and refuses anything not placed from the dashboard |
 
 Your Twilio secrets live only in Twilio's environment variables — never in the
@@ -54,6 +55,12 @@ Console → Voice → TwiML Apps → Create:
 
 Copy its SID (`AP…`) into `TWIML_APP_SID` in `.env`, then run `npm run deploy` again.
 
+### 5b. Receive calls (so leads can ring you back)
+Console → Phone Numbers → Manage → Active numbers → your number → Voice
+Configuration → **A call comes in** → Function → pick `signalboard-calls` and
+`/incoming`. Save. Calls to that number now ring the dashboard while it's open
+and connected; if it isn't, the call just ends.
+
 ### 6. Connect the dashboard
 Open the dashboard → **Call system** tab → **Settings**:
 - Backend URL: `https://<your base>`
@@ -75,7 +82,7 @@ The passcode is saved only in that browser.
 - Only numbers starting with `ALLOWED_PREFIXES` can be dialled (default `+44`)
 - UK premium-rate (`09…`), personal-numbering (`070…`) and `0871–0873` are always blocked
 - Every call is cut off after 30 minutes
-- Tokens can't receive calls — dial-out only
+- A token can only place calls through `/voice` (with the checks above) or ring the dashboard; it can't do anything else on your account
 
 If the passcode ever leaks, change `CALL_PASSCODE` and redeploy.
 

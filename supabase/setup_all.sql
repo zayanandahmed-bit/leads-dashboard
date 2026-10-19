@@ -104,5 +104,21 @@ create policy "anon can update signalboard_clients" on signalboard_clients for u
 drop policy if exists "anon can delete signalboard_clients" on signalboard_clients;
 create policy "anon can delete signalboard_clients" on signalboard_clients for delete using (true);
 
+-- Call recordings: the Twilio id of the call, so the dashboard's Play button
+-- can ask the backend for that call's recording. Null for calls with no
+-- recording (demo calls, calls nobody answered, or made before recording).
+-- The audio itself stays in Twilio, never in this database.
+alter table signalboard_call_log add column if not exists call_sid text;
+-- rec_id: which recording (kept in your private storage) belongs to this call.
+alter table signalboard_call_log add column if not exists rec_id text;
+-- direction: 'out' for calls we placed, 'in' for calls a lead made to us.
+alter table signalboard_call_log add column if not exists direction text not null default 'out';
+
+-- Private bucket for call recordings. No policies on purpose: the dashboard's
+-- public key can't touch it; only the call backend can, after checking your passcode.
+insert into storage.buckets (id, name, public)
+values ('signalboard-recordings', 'signalboard-recordings', false)
+on conflict (id) do nothing;
+
 -- Done — three tables: signalboard_lead_status, signalboard_call_log, signalboard_clients.
 select 'setup complete' as result;

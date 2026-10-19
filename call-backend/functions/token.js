@@ -15,11 +15,22 @@
  *   ALLOWED_ORIGINS       Comma-separated origins allowed to call this,
  *                         e.g. https://zayanandahmed-bit.github.io
  *   ALLOWED_PREFIXES      Comma-separated dialable prefixes (default +44)
+ *   AGENTS                Optional. Names of everyone who takes calls, e.g.
+ *                         zayan,ahmed. Each signs in under their own name and
+ *                         incoming calls ring all of them. Unset = one shared login.
  * ACCOUNT_SID is provided by the Functions runtime automatically.
  */
 const crypto = require("crypto");
 
-const IDENTITY = "signalboard-caller";
+// Each person gets their own identity ("sb_" + their name) so several people
+// can be signed in at once and incoming calls can ring all of them. With
+// AGENTS unset, everyone shares the single identity "sb_caller", which is the
+// original one-person behaviour.
+const IDENTITY_PREFIX = "sb_";
+
+function slug(name) {
+  return String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20);
+}
 const TTL_SECONDS = 3600;
 
 function list(value, fallback) {
@@ -74,21 +85,38 @@ exports.handler = function (context, event, callback) {
     return fail(401, "Wrong passcode.");
   }
 
+  const agents = list(context.AGENTS, "").map(slug).filter(Boolean);
+  let identity = IDENTITY_PREFIX + "caller";
+  if (agents.length) {
+    const who = slug(event.name);
+    if (!agents.includes(who)) {
+      return fail(403, "\"" + (String(event.name || "").trim() || "(no name)") +
+        "\" isn't on the list of people who can take calls. Put your name in Settings, and add it to AGENTS on the backend.");
+    }
+    identity = IDENTITY_PREFIX + who;
+  }
+
   const AccessToken = Twilio.jwt.AccessToken;
   const token = new AccessToken(context.ACCOUNT_SID, context.API_KEY, context.API_SECRET, {
-    identity: IDENTITY,
+    identity: identity,
     ttl: TTL_SECONDS,
   });
   token.addGrant(new AccessToken.VoiceGrant({
     outgoingApplicationSid: context.TWIML_APP_SID,
-    incomingAllow: false, // dial-out only: nothing can ring this browser
+    incomingAllow: true, // lets calls to your Twilio number ring this browser (see /incoming)
   }));
 
   response.setBody({
     token: token.toJwt(),
-    identity: IDENTITY,
+    identity: identity,
     callerId: context.CALLER_ID,
     allowedPrefixes: list(context.ALLOWED_PREFIXES, "+44"),
+    // Who records: "twilio", "browser" (the dashboard does) or "none". Sent
+    // from here so the server's RECORD_CALLS stays the one place to decide.
+    recording: (function () {
+      const m = String(context.RECORD_CALLS || "true").toLowerCase();
+      return m === "browser" ? "browser" : m === "false" ? "none" : "twilio";
+    })(),
     ttl: TTL_SECONDS,
   });
   return callback(null, response);

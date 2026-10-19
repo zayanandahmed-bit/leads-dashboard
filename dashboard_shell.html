@@ -1151,6 +1151,37 @@
     border-color: transparent;
   }
   .cs-del:hover { color: var(--st-lost); border-color: var(--st-lost); background: transparent; }
+  .cs-play {
+    flex: none;
+    padding: 1px 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-muted);
+    background: transparent;
+  }
+  .cs-play:hover { color: var(--accent); border-color: var(--accent); background: transparent; }
+  .cs-play[disabled] { opacity: .6; cursor: progress; }
+  .cs-rec-audio { display: block; width: 220px; max-width: 100%; margin-top: 6px; }
+  .cs-rec-dl { display: inline-block; margin-top: 2px; }
+  .cs-recnote {
+    margin: 8px 0 0;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    background: color-mix(in srgb, var(--st-lost) 12%, transparent);
+    color: var(--st-lost);
+  }
+  .cs-incoming {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 1000;
+    width: min(560px, calc(100vw - 24px)); padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--accent); background: var(--surface); color: var(--ink);
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    font-weight: 600;
+  }
+  .cs-incoming[hidden] { display: none; }
+  .cs-incoming .cs-spacer { flex: 1; }
+  .cs-rec-err { display: block; margin-top: 4px; font-size: 12px; color: var(--st-lost); }
 
   .cs-link-danger {
     align-self: flex-start;
@@ -1272,10 +1303,19 @@
     </div>
   </header>
 
+  <!-- Outside every tab on purpose: a call rings whatever you are looking at. -->
+  <div class="cs-incoming" id="csIncoming" role="alert" hidden>
+    <span id="csIncomingText"></span>
+    <span class="cs-spacer"></span>
+    <button type="button" class="btn-primary" id="csIncomingAnswer">Answer</button>
+    <button type="button" id="csIncomingDecline">Dismiss</button>
+  </div>
+
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button type="button" role="tab" id="tabToday" aria-selected="true" aria-controls="viewToday">Today</button>
     <button type="button" role="tab" id="tabLeads" aria-selected="false" aria-controls="viewLeads" tabindex="-1">Leads</button>
     <button type="button" role="tab" id="tabCalls" aria-selected="false" aria-controls="viewCalls" tabindex="-1">Call system <span class="cs-dot" id="tabDot" data-state="off" aria-hidden="true"></span></button>
+    <button type="button" role="tab" id="tabInbound" aria-selected="false" aria-controls="viewInbound" tabindex="-1">Inbound <span class="cs-dot" id="tabInDot" data-state="off" aria-hidden="true"></span></button>
     <button type="button" role="tab" id="tabClients" aria-selected="false" aria-controls="viewClients" tabindex="-1">Clients</button>
     <button type="button" role="tab" id="tabCost" aria-selected="false" aria-controls="viewCost" tabindex="-1">Cost calculator</button>
   </nav>
@@ -1508,6 +1548,7 @@
           <div class="cs-timer num" id="csTimer">0:00</div>
           <div class="cs-call-number num" id="csCallNumber"></div>
           <div class="cs-quality" id="csQuality" role="status" hidden></div>
+          <div class="cs-recnote" id="csRecNote" role="status" hidden></div>
           <div class="cs-controls">
             <button type="button" id="csMute" aria-pressed="false" disabled>Mute</button>
             <button type="button" id="csHangup" class="btn-danger" disabled>Hang up</button>
@@ -1586,12 +1627,36 @@
       <div class="table-scroll">
         <table class="cs-log-table">
           <thead>
-            <tr><th>When</th><th>Business</th><th>Line</th><th>Ring</th><th>Talk</th><th>Outcome</th><th>Notes</th><th>By</th><th aria-label="Remove call"></th></tr>
+            <tr><th>When</th><th>Business</th><th>Line</th><th>Ring</th><th>Talk</th><th>Outcome</th><th>Notes</th><th>By</th><th>Recording</th><th aria-label="Remove call"></th></tr>
           </thead>
           <tbody id="csLogRows"></tbody>
         </table>
       </div>
       <div class="empty" id="csLogEmpty">No calls logged yet.</div>
+    </section>
+  </div>
+
+  <div id="viewInbound" class="view" role="tabpanel" aria-labelledby="tabInbound" hidden>
+    <section class="kpis" id="inKpis" aria-label="Inbound summary"></section>
+    <section class="cs-panel" aria-label="Inbound calls">
+      <div class="cs-panel-head">
+        <h2>Inbound calls</h2>
+        <span class="cs-hint" id="inStatus"></span>
+      </div>
+      <p class="cs-hint">
+        When a lead rings your Twilio number, it rings every browser that has this dashboard open and
+        connected. Whichever you answer on takes the call and the other stops ringing. The call then
+        opens in the Call system tab. Missed calls land below.
+      </p>
+      <div class="table-scroll">
+        <table class="cs-log-table">
+          <thead>
+            <tr><th>When</th><th>From</th><th>Result</th><th>Talk</th><th>Outcome</th><th>Notes</th><th>Taken by</th><th>Recording</th><th></th></tr>
+          </thead>
+          <tbody id="inRows"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="inEmpty">No inbound calls yet.</div>
     </section>
   </div>
 
@@ -2975,13 +3040,17 @@
   /* ---------- Supabase call_log sync ---------- */
 
   function csRowFromLog(g) {
-    return {
+    var row = {
       id: g.id, lead_id: g.leadId, line: g.line, manual_number: g.manualNumber || null,
       started_at: new Date(g.startedAt).toISOString(), ring_sec: g.ringSec || 0, talk_sec: g.talkSec || 0,
       outcome: g.outcome, note: g.note || "",
       callback_at: g.callbackAt ? new Date(g.callbackAt).toISOString() : null,
       caller: g.caller || ""
     };
+    if (g.callSid) row.call_sid = g.callSid;
+    if (g.recId) row.rec_id = g.recId;
+    if (g.dir === "in") row.direction = "in";
+    return row;
   }
 
   function csPushLog(g) {
@@ -3022,7 +3091,7 @@
           startedAt: new Date(row.started_at).getTime(), ringSec: row.ring_sec || 0, talkSec: row.talk_sec || 0,
           outcome: row.outcome, note: row.note || "",
           callbackAt: row.callback_at ? new Date(row.callback_at).getTime() : null,
-          caller: row.caller || "", demo: false, synced: true
+          caller: row.caller || "", callSid: row.call_sid || null, recId: row.rec_id || null, dir: row.direction === "in" ? "in" : "out", demo: false, synced: true
         });
       });
       csLogs.sort(function (a, b) { return b.startedAt - a.startedAt; });
@@ -3054,7 +3123,7 @@
     var url = csSettings.backendUrl.replace(/\/+$/, "") + "/token";
     // Form-encoded on purpose: a JSON body would trigger a CORS preflight,
     // which a Twilio Function can't answer. This stays a "simple" request.
-    var body = new URLSearchParams({ passcode: csSettings.passcode });
+    var body = new URLSearchParams({ passcode: csSettings.passcode, name: csSettings.caller || "" });
     // A backend that never answers must not leave "Connecting…" up forever.
     var ctrl = typeof AbortController === "function" ? new AbortController() : null;
     var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 15000) : null;
@@ -3102,6 +3171,9 @@
         if (err && (err.code === 20101 || err.code === 20104)) csSetConn("error", csErrText(err));
         else toast("Twilio: " + csErrText(err));
       });
+      // Registering is what lets calls to your Twilio number ring this page.
+      csDevice.on("incoming", csIncomingCall);
+      csDevice.register().catch(function () {});
       csDevice.on("tokenWillExpire", function () {
         csFetchToken().then(function (next) {
           csTokenInfo = next;
@@ -3120,7 +3192,155 @@
     if (csDevice) { try { csDevice.destroy(); } catch (e) {} }
     csDevice = null;
     csTokenInfo = null;
+    csHideIncoming();
     csSetConn("off", csSettings.demo ? "" : "Disconnected.");
+  }
+
+  /* ---------- inbound tab ---------- */
+
+  function csRenderInbound() {
+    var logs = csModeLogs().filter(function (g) { return g.dir === "in"; });
+    var start = new Date();
+    start.setHours(0, 0, 0, 0);
+    var today = logs.filter(function (g) { return g.startedAt >= start.getTime(); });
+    var answered = today.filter(function (g) { return g.talkSec > 0; });
+    var talk = answered.reduce(function (sum, g) { return sum + (g.talkSec || 0); }, 0);
+    var tiles = [
+      { label: "Inbound today", value: today.length, note: "calls to your number" },
+      { label: "Answered", value: answered.length, note: today.length ? Math.round(answered.length / today.length * 100) + "% of calls" : "none yet", cls: "is-accent" },
+      { label: "Missed", value: today.length - answered.length, note: "worth calling back", cls: today.length - answered.length ? "is-prime" : "" },
+      { label: "Talk time", value: csDur(talk), note: answered.length ? "avg " + csDur(talk / answered.length) + " per call" : "—" }
+    ];
+    csEl("inKpis").innerHTML = tiles.map(function (t) {
+      return '<div class="kpi"><span class="kpi-label">' + esc(t.label) + "</span>" +
+        '<span class="kpi-value ' + (t.cls || "") + '">' + esc(t.value) + "</span>" +
+        '<span class="kpi-note">' + esc(t.note) + "</span></div>";
+    }).join("");
+
+    csEl("inStatus").textContent = csSettings.demo ? "Demo mode: no real calls"
+      : csConn === "ready" ? "Ringing for " + (csSettings.caller || "you") : "Not connected: open Call system to connect";
+    csEl("tabInDot").dataset.state = csConn === "ready" ? "on" : "off";
+
+    csEl("inRows").innerHTML = logs.slice(0, 150).map(function (g) {
+      var lead = g.leadId ? LEAD_BY_ID[g.leadId] : csLeadForNumber(g.manualNumber);
+      var number = g.manualNumber || (lead && csE164(lead.phone)) || "";
+      var missed = !(g.talkSec > 0);
+      return "<tr>" +
+        '<td class="num">' + esc(csWhen(g.startedAt)) + "</td>" +
+        '<td><div class="cell-name">' + esc(lead ? lead.name : (number || "Unknown number")) + "</div>" +
+          (lead && number ? '<div class="cell-sub num">' + esc(number) + "</div>" : "") + "</td>" +
+        '<td><span class="cs-chip" data-tone="' + (missed ? "bad" : "good") + '">' + (missed ? "Missed" : "Answered") + "</span></td>" +
+        '<td class="num">' + (missed ? "—" : csDur(g.talkSec)) + "</td>" +
+        "<td>" + (missed ? "" : csOutcomeChip(g.outcome)) + "</td>" +
+        '<td class="cs-log-note">' + esc(missed ? "" : (g.note || "")) + "</td>" +
+        "<td>" + esc(missed ? "" : (g.caller || "")) + "</td>" +
+        '<td class="cs-rec-cell">' + (g.recId
+          ? '<button type="button" class="cs-play" data-rec="' + esc(g.recId) + '" title="Play the recording">&#9654; Play</button>'
+          : g.callSid && g.talkSec > 0
+            ? '<button type="button" class="cs-play" data-play="' + esc(g.callSid) + '" title="Play the recording">&#9654; Play</button>' : "") + "</td>" +
+        "<td>" + (number ? '<button type="button" class="cs-play" data-callback="' + esc(number) + '" data-lead="' + esc(lead ? lead.id : "") + '">Call back</button>' : "") + "</td>" +
+        "</tr>";
+    }).join("");
+    csEl("inEmpty").hidden = logs.length > 0;
+  }
+
+  function csInboundClick(ev) {
+    var play = ev.target.closest("button[data-play]");
+    if (play) { csPlayRecording(play); return; }
+    var local = ev.target.closest("button[data-rec]");
+    if (local) { csPlayLocal(local); return; }
+    var cb = ev.target.closest("button[data-callback]");
+    if (!cb) return;
+    var lead = cb.dataset.lead ? LEAD_BY_ID[cb.dataset.lead] : null;
+    csShowView("calls");
+    csStartCall(cb.dataset.callback, { leadId: lead ? lead.id : null, line: "manual", display: lead ? lead.name : cb.dataset.callback });
+  }
+
+  // Missed calls are written by the backend, not this page, so while the
+  // Inbound tab is in front, look for new ones every half minute.
+  setInterval(function () {
+    if (!csEl("viewInbound").hidden && !document.hidden && csBooted) {
+      csLoadRemoteLogs().then(csRenderInbound);
+    }
+  }, 30000);
+
+  /* ---------- receiving calls ---------- */
+
+  var csPending = null;   // an incoming call that is ringing and not yet answered
+
+  function csLeadForNumber(from) {
+    var n = csE164(from) || from;
+    if (LEAD_BY_ID[n]) return LEAD_BY_ID[n];
+    for (var i = 0; i < LEADS.length; i++) if (csE164(LEADS[i].phone) === n) return LEADS[i];
+    return null;
+  }
+
+  function csHideIncoming() {
+    csPending = null;
+    csEl("csIncoming").hidden = true;
+  }
+
+  function csIncomingCall(call) {
+    var from = (call.parameters && call.parameters.From) || "";
+    var lead = csLeadForNumber(from);
+    var who = lead ? lead.name + " (" + from + ")" : (from || "Unknown number");
+    // Already on a call, or another is ringing: turn this one away rather
+    // than cutting off the conversation you're in.
+    // ignore(), not reject(): it only stops ringing in THIS browser. reject()
+    // tells Twilio you refused, which can end the call for your other browser too.
+    if ((csSession && !csSession.ended) || csPending) { call.ignore(); return; }
+    csPending = { call: call, from: from, lead: lead, who: who };
+    csEl("csIncomingText").textContent = "Incoming call: " + who;
+    csEl("csIncoming").hidden = false;
+    call.on("cancel", function () {
+      if (csPending && csPending.call === call) { csHideIncoming(); toast("Missed call from " + who); }
+    });
+  }
+
+  function csAnswerIncoming() {
+    var p = csPending;
+    if (!p) return;
+    csHideIncoming();
+    csCancelAuto();
+    document.getElementById("tabCalls").click();
+    if (p.lead) csSelectLead(p.lead.id, { force: true }); else { csSession = null; csOutcome = null; }
+    csOutcome = null;
+    csTonesSent = "";
+    csEl("csOutcomeHint").textContent = "";
+    var now = Date.now();
+    var session = {
+      leadId: p.lead ? p.lead.id : null, line: "manual", number: p.from, display: "Incoming: " + (p.lead ? p.lead.name : p.from),
+      startedAt: now, ringAt: now, acceptedAt: null, endedAt: null,
+      phase: "connecting", ended: false, saved: false, muted: false, demo: false, incoming: true
+    };
+    csSession = session;
+    var call = p.call;
+    csCall = call;
+    if (call.parameters && call.parameters.CallSid) session.callSid = call.parameters.CallSid;
+    call.on("accept", function () {
+      if (call.parameters && call.parameters.CallSid) session.callSid = call.parameters.CallSid;
+      csPhase(session, "live");
+      if (csTokenInfo && csTokenInfo.recording === "browser") csRecStart(session, call);
+    });
+    call.on("disconnect", function () { csEnded(session); });
+    call.on("cancel", function () { csEnded(session); });
+    call.on("reject", function () { csEnded(session); });
+    call.on("error", function (err) { toast("Call problem: " + csErrText(err)); });
+    call.on("warning", function (name) { csQuality(session, name, true); });
+    call.on("warning-cleared", function (name) { csQuality(session, name, false); });
+    call.on("reconnecting", function () { csQuality(session, "reconnecting", true); });
+    call.on("reconnected", function () { csQuality(session, "reconnecting", false); });
+    clearInterval(csTimerInterval);
+    csTimerInterval = setInterval(csTick, 500);
+    csRenderAll();
+    call.accept();
+  }
+
+  function csDeclineIncoming() {
+    var p = csPending;
+    if (!p) return;
+    csHideIncoming();
+    p.call.ignore();   // stops ringing here only; your other browser can still answer
   }
 
   /* ---------- placing calls ---------- */
@@ -3169,10 +3389,20 @@
     csDevice.connect({ params: { To: session.number } }).then(function (call) {
       if (csSession !== session || session.ended) { call.disconnect(); return; }
       csCall = call;
-      call.on("ringing", function () { csPhase(session, "ringing"); });
+      // The id of this call on Twilio's side. The recording is stored against
+      // it, so it is what the Play button asks for later. It is only filled in
+      // once the call is underway, hence read on every event that follows.
+      var csGrabSid = function () {
+        if (call.parameters && call.parameters.CallSid) session.callSid = call.parameters.CallSid;
+      };
+      call.on("ringing", function () { csGrabSid(); csPhase(session, "ringing"); });
       // The backend dials with answerOnBridge, so "accept" lands when the
       // other side actually picks up — which is what talk time measures.
-      call.on("accept", function () { csPhase(session, "live"); });
+      call.on("accept", function () {
+        csGrabSid();
+        csPhase(session, "live");
+        if (csTokenInfo && csTokenInfo.recording === "browser") csRecStart(session, call);
+      });
       call.on("disconnect", function () { csEnded(session); });
       call.on("cancel", function () { csEnded(session); });
       call.on("reject", function () { csEnded(session); });
@@ -3239,6 +3469,7 @@
     if (csSession !== session || session.ended) return;
     session.ended = true;
     session.endedAt = Date.now();
+    csRecStop();
     session.phase = "ended";
     csCall = null;
     clearInterval(csTimerInterval);
@@ -3326,7 +3557,10 @@
     var callbackAt = def.callback && cbVal ? new Date(cbVal).getTime() : null;
     if (callbackAt !== null && isNaN(callbackAt)) callbackAt = null;
     var log = {
-      id: csUuid(),
+      // An answered inbound call uses the id the backend's missed-call logger
+      // would have used, so the two can never both record the same call.
+      id: s && s.incoming && s.callSid ? "in-" + s.callSid : csUuid(),
+      dir: s && s.incoming ? "in" : "out",
       leadId: leadId || null,
       line: s ? s.line : "main",
       manualNumber: s && s.line === "manual" ? s.number : null,
@@ -3339,6 +3573,8 @@
       note: csEl("csNote").value.trim(),
       callbackAt: callbackAt,
       caller: csSettings.caller || "",
+      callSid: s && s.callSid && !s.demo ? s.callSid : null,
+      recId: s && s.recId ? s.recId : null,   // recording kept on this computer
       demo: s ? s.demo : !!csSettings.demo,
       noDial: !s,                        // logged without placing a call here
       synced: false
@@ -3449,6 +3685,8 @@
     for (var i = 0; i < csLogs.length; i++) if (csLogs[i].id === id) { idx = i; break; }
     if (idx === -1) return null;
     var g = csLogs.splice(idx, 1)[0];
+    csRecDelete(g.recId);
+    if (g.recId) { csCloudDelete(g.recId); csPendingDrop(g.recId); }
     csPersistLogs();
     var msg = "";
     if (!g.demo) {
@@ -3935,6 +4173,13 @@
     var warns = live && s.warnings ? Object.keys(s.warnings).filter(function (n) {
       return !(s.muted && n === "constant-audio-input-level");   // silence is expected on mute
     }) : [];
+    // This call is being recorded and nothing automated tells the other
+    // person, so say so on screen: it's the caller's line to say, first.
+    var recOn = live && csTokenInfo && csTokenInfo.recording && csTokenInfo.recording !== "none" && !s.demo;
+    csEl("csRecNote").hidden = !recOn;
+    csEl("csRecNote").textContent = recOn
+      ? (s.phase === "live" ? "Recording. Tell them the call is recorded." : "This call is recorded. Tell them as soon as they answer.")
+      : "";
     csEl("csQuality").hidden = !warns.length;
     csEl("csQuality").textContent = warns.length ? CS_QUALITY_TEXT[warns[warns.length - 1]] : "";
     csEl("csMute").disabled = !(live && s.phase === "live");
@@ -3956,13 +4201,18 @@
         '<td><div class="cell-name">' + esc(name) + "</div>" +
           (lead ? '<div class="cell-sub">' + esc(lead.city) + "</div>" : "") +
           (g.manualNumber && lead ? '<div class="cell-sub num">' + esc(g.manualNumber) + "</div>" : "") + "</td>" +
-        "<td>" + esc(g.noDial ? "logged only" : g.line) + "</td>" +
+        "<td>" + esc(g.noDial ? "logged only" : g.dir === "in" ? "inbound" : g.line) + "</td>" +
         '<td class="num">' + (g.noDial ? "—" : csDur(g.ringSec)) + "</td>" +
         '<td class="num">' + (g.noDial ? "—" : csDur(g.talkSec)) + "</td>" +
         "<td>" + csOutcomeChip(g.outcome) +
           (g.callbackAt ? '<div class="cell-sub">back ' + esc(csWhen(g.callbackAt)) + "</div>" : "") + "</td>" +
         '<td class="cs-log-note">' + esc(g.note || "") + "</td>" +
         "<td>" + esc(g.caller || "") + "</td>" +
+        '<td class="cs-rec-cell">' + (g.recId
+          ? '<button type="button" class="cs-play" data-rec="' + esc(g.recId) + '" title="Play the recording saved on this computer">&#9654; Play</button>'
+          : g.callSid && g.talkSec > 0
+            ? '<button type="button" class="cs-play" data-play="' + esc(g.callSid) + '" title="Play the recording">&#9654; Play</button>'
+            : "") + "</td>" +
         '<td><button type="button" class="cs-del" data-del="' + esc(g.id) + '" aria-label="Remove this call" title="Remove this call">&times;</button></td>' +
         "</tr>";
     }).join("");
@@ -3998,6 +4248,7 @@
     csRenderOutcomes();
     csRenderCallUi();
     csRenderLog();
+    csRenderInbound();
     csRenderSync();
     csRenderClock();
   }
@@ -4810,7 +5061,7 @@
   // Written as a loop over this list — rather than one hardcoded line per
   // tab — so a new tab only needs adding here and to the click-wiring below,
   // instead of every place a tab name used to be spelled out individually.
-  var CS_TABS = ["today", "leads", "calls", "clients", "cost"];
+  var CS_TABS = ["today", "leads", "calls", "inbound", "clients", "cost"];
 
   function csTabId(name) { return name[0].toUpperCase() + name.slice(1); }
 
@@ -4829,6 +5080,12 @@
     if (name === "calls") {
       if (!csBooted) csBoot();
       csRenderAll();
+    } else if (name === "inbound") {
+      // Incoming calls only ring a page that has set up the phone connection,
+      // so opening this tab does the same boot as the Call system tab.
+      if (!csBooted) csBoot();
+      csRenderInbound();
+      csLoadRemoteLogs();     // pick up missed calls other people's devices saw
     } else if (name === "cost") {
       if (!ccBooted) ccBoot();
     } else if (name === "clients") {
@@ -4863,6 +5120,7 @@
     }, 30000);
     if (csSettings.demo || (csSettings.backendUrl && csSettings.passcode)) csConnect();
     else csSetConn("off", "");
+    csFlushPending();   // recordings made while signed out or offline
   }
 
   /* ---------- call system events ---------- */
@@ -5014,11 +5272,16 @@
   csEl("csSave").addEventListener("click", function () { csSaveOutcome(false); });
   csEl("csSaveNext").addEventListener("click", function () { csSaveOutcome(true); });
   csEl("csUndoBtn").addEventListener("click", csUndoLastSave);
+  csEl("inRows").addEventListener("click", csInboundClick);
+  csEl("csIncomingAnswer").addEventListener("click", csAnswerIncoming);
+  csEl("csIncomingDecline").addEventListener("click", csDeclineIncoming);
   csEl("csDiscard").addEventListener("click", function () {
     if (!csSession || !csSession.ended || csSession.saved) return;
     var billed = !csSession.demo && csSession.acceptedAt;
     if (!window.confirm("Discard this call without logging it?" +
         (billed ? " Twilio still bills the time it was connected." : ""))) return;
+    csRecDelete(csSession.recId);
+    if (csSession.recId) { csCloudDelete(csSession.recId); csPendingDrop(csSession.recId); }
     csSession = null;
     csOutcome = null;
     csEl("csNote").value = "";
@@ -5042,7 +5305,223 @@
     if (lead) openDrawer(lead);
   });
 
+  /* ---------- private recording storage (passcode only) ---------- */
+
+  // Recordings are copied to a PRIVATE Supabase Storage bucket that this page
+  // can't touch directly: the bucket has no public access and no policy for the
+  // page's anon key. Instead the call backend, which checks your passcode and
+  // holds the only key to the bucket, hands out short-lived links, one for a
+  // single upload or a single download. So the passcode is the only login, and
+  // the page itself never holds anything that opens the recordings.
+  var CS_PENDING_KEY = "signalboard.recordings.pending.v1";
+
+  function csCloudReady() {
+    return !csSettings.demo && !!csSettings.backendUrl && !!csSettings.passcode;
+  }
+  // Ask the backend for a one-use link: action is "upload", "download" or "delete".
+  function csCloudLink(action, id) {
+    var url = csSettings.backendUrl.replace(/\/+$/, "") + "/recording-url";
+    var body = new URLSearchParams({ passcode: csSettings.passcode, action: action, id: id });
+    return fetch(url, { method: "POST", body: body }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) { var e = new Error(d.error || ("Backend returned " + r.status)); e.status = r.status; throw e; }
+        return d;
+      });
+    });
+  }
+  function csCloudUpload(id, blob) {
+    if (!csCloudReady()) return Promise.resolve(false);
+    return csCloudLink("upload", id).then(function (d) {
+      var form = new FormData();
+      form.append("cacheControl", "3600");
+      form.append("", blob);
+      return fetch(d.url, { method: "PUT", headers: { "apikey": SUPABASE_ANON_KEY }, body: form });
+    }).then(function (r) { return r.ok; }).catch(function () { return false; });
+  }
+  function csCloudFetch(id) {
+    if (!csCloudReady()) return Promise.resolve({ notReady: true });
+    return csCloudLink("download", id).then(function (d) {
+      return fetch(d.url);
+    }).then(function (r) {
+      if (!r.ok) return { missing: true };
+      return r.blob().then(function (b) { return { blob: b }; });
+    }).catch(function (err) {
+      return err && err.status === 404 ? { missing: true } : { error: true };
+    });
+  }
+  function csCloudDelete(id) {
+    if (csCloudReady()) csCloudLink("delete", id).catch(function () {});
+  }
+
+  // Recordings that couldn't go up yet (offline, or no backend configured)
+  // wait here and are retried.
+  function csPendingList() { var l = csLoadJson(CS_PENDING_KEY, []); return Array.isArray(l) ? l : []; }
+  function csPendingSet(l) { csSaveJson(CS_PENDING_KEY, l); }
+  function csPendingAdd(id) { var l = csPendingList(); if (l.indexOf(id) === -1) { l.push(id); csPendingSet(l); } }
+  function csPendingDrop(id) { csPendingSet(csPendingList().filter(function (x) { return x !== id; })); }
+  function csFlushPending() {
+    if (!csCloudReady()) return;
+    csPendingList().forEach(function (id) {
+      csRecGet(id).then(function (blob) {
+        if (!blob) { csPendingDrop(id); return; }
+        return csCloudUpload(id, blob).then(function (ok) { if (ok) csPendingDrop(id); });
+      }).catch(function () {});
+    });
+  }
+
+  /* ---------- recording on this computer ---------- */
+
+  // When the backend says recording is "browser", the dashboard records the
+  // call itself: your microphone plus the other person's audio, mixed into one
+  // track and kept in this browser's IndexedDB. A copy also goes to the private
+  // bucket above, so it plays in any browser using your passcode.
+  var CS_REC_DB = "signalboard.recordings";
+  var csRecorder = null;
+
+  function csRecDb() {
+    return new Promise(function (resolve, reject) {
+      var open = indexedDB.open(CS_REC_DB, 1);
+      open.onupgradeneeded = function () { open.result.createObjectStore("rec"); };
+      open.onsuccess = function () { resolve(open.result); };
+      open.onerror = function () { reject(open.error); };
+    });
+  }
+  function csRecTx(mode, fn) {
+    return csRecDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction("rec", mode), out = fn(tx.objectStore("rec"));
+        tx.oncomplete = function () { db.close(); resolve(out && out.result); };
+        tx.onerror = tx.onabort = function () { db.close(); reject(tx.error); };
+      });
+    });
+  }
+  function csRecPut(id, blob) { return csRecTx("readwrite", function (st) { return st.put(blob, id); }); }
+  function csRecGet(id) { return csRecTx("readonly", function (st) { return st.get(id); }); }
+  function csRecDelete(id) { if (id) csRecTx("readwrite", function (st) { return st.delete(id); }).catch(function () {}); }
+
+  function csRecStart(session, call) {
+    try {
+      if (!window.MediaRecorder || !(window.AudioContext || window.webkitAudioContext)) return;
+      var local = call.getLocalStream && call.getLocalStream();
+      var remote = call.getRemoteStream && call.getRemoteStream();
+      if (!local || !remote) return;
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var mix = ctx.createMediaStreamDestination();
+      ctx.createMediaStreamSource(local).connect(mix);
+      ctx.createMediaStreamSource(remote).connect(mix);
+      // 32 kbps is plenty for two voices and keeps a 30-minute call near 7 MB.
+      var rec = new MediaRecorder(mix.stream, { audioBitsPerSecond: 32000 }), chunks = [];
+      session.recId = csUuid();
+      rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      rec.onstop = function () {
+        try { ctx.close(); } catch (e) {}
+        if (!chunks.length) return;
+        var blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+        var id = session.recId;
+        csRecPut(id, blob).then(function () {
+          csPendingAdd(id);
+          csFlushPending();
+        }).catch(function () { toast("Couldn't save the recording on this computer."); });
+      };
+      rec.start(5000);   // a chunk every 5s, so a crash mid-call loses seconds, not the call
+      csRecorder = rec;
+    } catch (e) {
+      csRecorder = null;
+    }
+  }
+  function csRecStop() {
+    var rec = csRecorder;
+    csRecorder = null;
+    if (rec && rec.state !== "inactive") { try { rec.stop(); } catch (e) {} }
+  }
+
+  function csPlayLocal(btn) {
+    var cell = btn.closest("td");
+    var old = cell.querySelector(".cs-rec-err, audio, .cs-rec-dl");
+    if (old) old.remove();
+    var id = btn.dataset.rec;
+    csRecGet(id).then(function (blob) {
+      if (blob) return blob;
+      return csCloudFetch(id).then(function (res) {
+        if (res.blob) { csRecPut(id, res.blob).catch(function () {}); return res.blob; }   // keep a copy here for next time
+        throw new Error(res.notReady
+          ? "Not on this computer. Add your backend URL and passcode in Settings to play recordings made elsewhere."
+          : res.error ? "Couldn't reach your storage. Try again in a moment."
+          : "That recording isn't in storage. It may not have uploaded yet, or it was deleted.");
+      });
+    }).then(function (blob) {
+      var url = URL.createObjectURL(blob);
+      var audio = document.createElement("audio");
+      audio.className = "cs-rec-audio";
+      audio.controls = true;
+      audio.src = url;
+      var dl = document.createElement("a");
+      dl.className = "cs-rec-dl cell-sub";
+      dl.textContent = "Download";
+      dl.href = url;
+      dl.download = "call-" + id.slice(0, 8) + ".webm";
+      cell.appendChild(audio);
+      cell.appendChild(dl);
+      audio.play().catch(function () {});
+      btn.hidden = true;
+    }).catch(function (err) {
+      var msg = document.createElement("span");
+      msg.className = "cs-rec-err";
+      msg.textContent = err && err.message ? err.message : "Couldn't open the recording.";
+      cell.appendChild(msg);
+    });
+  }
+
+  /* ---------- call recordings ---------- */
+
+  // Fetches one recording from the backend and plays it in the row. The audio
+  // arrives as base64 inside JSON because the backend is a Twilio Function,
+  // which can't stream. Form-encoded for the same no-preflight reason as /token.
+  function csPlayRecording(btn) {
+    var cell = btn.closest("td");
+    var old = cell.querySelector(".cs-rec-err, audio");
+    if (old) old.remove();
+    if (!csSettings.backendUrl || !csSettings.passcode) {
+      toast("Add your backend URL and passcode in Call system settings first.");
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = "Loading…";
+    var url = csSettings.backendUrl.replace(/\/+$/, "") + "/recording";
+    var body = new URLSearchParams({ passcode: csSettings.passcode, callSid: btn.dataset.play });
+    fetch(url, { method: "POST", body: body }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (data) {
+        if (!r.ok || !data.audio) throw new Error(data.error || ("Backend returned " + r.status));
+        return data;
+      });
+    }).then(function (data) {
+      var bin = atob(data.audio), bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      var audio = document.createElement("audio");
+      audio.className = "cs-rec-audio";
+      audio.controls = true;
+      audio.src = URL.createObjectURL(new Blob([bytes], { type: data.type || "audio/mpeg" }));
+      cell.appendChild(audio);
+      audio.play().catch(function () {});
+      btn.hidden = true;
+    }).catch(function (err) {
+      var msg = document.createElement("span");
+      msg.className = "cs-rec-err";
+      msg.textContent = err && err.message ? err.message : "Couldn't load the recording.";
+      cell.appendChild(msg);
+      btn.disabled = false;
+      btn.innerHTML = "&#9654; Play";
+    });
+  }
+
   csEl("csLogRows").addEventListener("click", function (ev) {
+    var play = ev.target.closest("button[data-play]");
+    if (play) { csPlayRecording(play); return; }
+    var playLocal = ev.target.closest("button[data-rec]");
+    if (playLocal) { csPlayLocal(playLocal); return; }
+    // The player's own controls live inside the row, and a click on them must
+    // not count as "open this lead" (which scrolls the page away).
+    if (ev.target.closest(".cs-rec-cell")) return;
     var del = ev.target.closest("button[data-del]");
     if (del) { csConfirmRemove(del.dataset.del); return; }
     var tr = ev.target.closest("tr[data-id]");
