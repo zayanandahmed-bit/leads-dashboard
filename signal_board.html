@@ -3,6 +3,31 @@
      so none of the mobile layout rules ever applied on a real phone. -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Signal Board</title>
+<!-- Passcode screen: asked every time the page opens or refreshes. -->
+<div id="sb-gate" style="position:fixed;inset:0;z-index:2147483647;background:#0f0f14;display:flex;align-items:center;justify-content:center;font-family:-apple-system,Segoe UI,Arial,sans-serif">
+  <form id="sb-gate-form" style="background:#1b1b24;padding:28px;border-radius:16px;width:min(340px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="color:#fff;font-weight:700;font-size:20px;margin-bottom:6px">Signal Board</div>
+    <div style="color:#9a9ab0;font-size:14px;margin-bottom:16px">Enter the passcode to continue.</div>
+    <input id="sb-gate-pass" type="password" autocomplete="current-password" autofocus placeholder="Passcode" style="width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid #33334a;background:#0f0f14;color:#fff;font-size:16px">
+    <button type="submit" style="margin-top:14px;width:100%;padding:12px;border:0;border-radius:10px;background:linear-gradient(90deg,#6c3cff,#e0307e);color:#fff;font-weight:700;font-size:15px;cursor:pointer">Open</button>
+    <div id="sb-gate-err" style="color:#ff6b8a;font-size:13px;margin-top:10px;display:none">Wrong passcode.</div>
+  </form>
+</div>
+<script>
+(function () {
+  var HASH = "e34003b6ef2765479dc2e2f7ee3c7bf6018f10876049ba10a1166c2b3255f69c";
+  document.documentElement.style.overflow = "hidden";
+  document.getElementById("sb-gate-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var v = document.getElementById("sb-gate-pass").value;
+    var buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v));
+    var hex = Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+    if (hex === HASH) { document.getElementById("sb-gate").remove(); document.documentElement.style.overflow = ""; }
+    else { document.getElementById("sb-gate-err").style.display = "block"; document.getElementById("sb-gate-pass").select(); }
+  });
+})();
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
